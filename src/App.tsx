@@ -10,6 +10,7 @@ import Donate from "./pages/Donate"
 import Volunteers from "./pages/Volunteers"
 import Dashboard from "./pages/Dashboard"
 import Admin from "./pages/Admin"
+import MyRescues from "./pages/MyRescues"
 
 function App() {
   return (
@@ -19,10 +20,12 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/food" element={<Food />} />
         <Route path="/food/:id" element={<FoodDetails />} />
+         <Route path="/my-rescues" element={<MyRescues />} />
         <Route path="/donate" element={<Donate />} />
         <Route path="/volunteers" element={<Volunteers />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/admin" element={<Admin />} />
+       
       </Routes>
       <Footer />
     </BrowserRouter>

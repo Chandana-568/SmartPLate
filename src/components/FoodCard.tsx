@@ -1,12 +1,19 @@
-import { Clock, MapPin, Users } from "lucide-react"
+import { Clock, MapPin, Users, Navigation } from "lucide-react"
 import { Link } from "react-router-dom"
 import type { FoodDonation } from "../types"
 
 interface FoodCardProps {
   donation: FoodDonation
+  distance?: number | null
 }
 
-function FoodCard({ donation }: FoodCardProps) {
+function FoodCard({ donation, distance }: FoodCardProps) {
+  const openInMaps = () => {
+    const url = `https://www.google.com/maps/search/?api=1&query=${donation.latitude},${donation.longitude}`
+
+    window.open(url, "_blank")
+  }
+
   return (
     <div className="group overflow-hidden rounded-3xl border bg-white transition duration-300 hover:-translate-y-2 hover:shadow-xl">
 
@@ -51,29 +58,53 @@ function FoodCard({ donation }: FoodCardProps) {
 
         <div className="mt-5 space-y-3 text-sm text-gray-600">
 
+          {/* Quantity */}
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             <span>{donation.quantity} meals</span>
           </div>
 
+          {/* Location */}
           <div className="flex items-center gap-2">
             <MapPin className="h-4 w-4" />
             <span>{donation.location}</span>
           </div>
 
+          {/* Distance */}
+          {distance !== null && distance !== undefined && (
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <span>📏</span>
+              <span>{distance.toFixed(1)} km away</span>
+            </div>
+          )}
+
+          {/* Pickup Time */}
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
-            <span>Pickup before {donation.pickupBefore}</span>
+            <span>
+              Pickup before {donation.pickupBefore}
+            </span>
           </div>
 
         </div>
 
-       <Link
-  to={`/food/${donation.id}`}
-  className="mt-6 block w-full rounded-full bg-black px-5 py-3 text-center font-semibold text-white transition hover:bg-gray-800"
->
-  View Details
-</Link>
+        {/* Map Button */}
+        <button
+          type="button"
+          onClick={openInMaps}
+          className="mt-6 flex w-full items-center justify-center gap-2 rounded-full border px-5 py-3 font-semibold transition hover:bg-gray-50"
+        >
+          <Navigation className="h-4 w-4" />
+          View on Map
+        </button>
+
+        {/* View Details */}
+        <Link
+          to={`/food/${donation.id}`}
+          className="mt-3 block w-full rounded-full bg-black px-5 py-3 text-center font-semibold text-white transition hover:bg-gray-800"
+        >
+          View Details
+        </Link>
 
       </div>
     </div>

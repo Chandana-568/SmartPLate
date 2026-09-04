@@ -12,11 +12,15 @@ function Food() {
   const [foodType, setFoodType] = useState("all")
   const [urgency, setUrgency] = useState("all")
 
+  // User location
   const [userLatitude, setUserLatitude] = useState<number | null>(null)
   const [userLongitude, setUserLongitude] = useState<number | null>(null)
 
   const [locationLoading, setLocationLoading] = useState(false)
   const [locationError, setLocationError] = useState("")
+
+  // Distance filter
+  const [distanceFilter, setDistanceFilter] = useState("all")
 
   // Get user's current location
   const getUserLocation = () => {
@@ -52,7 +56,7 @@ function Food() {
     (donation) => donation.status === "available"
   )
 
-  // Search + filters
+  // Search + existing filters
   const filteredDonations = availableDonations.filter(
     (donation) => {
       const matchesSearch =
@@ -68,7 +72,11 @@ function Food() {
         urgency === "all" ||
         donation.urgency === urgency
 
-      return matchesSearch && matchesFoodType && matchesUrgency
+      return (
+        matchesSearch &&
+        matchesFoodType &&
+        matchesUrgency
+      )
     }
   )
 
@@ -106,7 +114,26 @@ function Food() {
       return a.distance - b.distance
     }
   )
-  console.log("Sorted donations:", sortedDonations)
+
+  // Apply distance filter
+  const nearbyDonations = sortedDonations.filter(
+    (donation) => {
+      // Show everything when no distance filter is selected
+      if (distanceFilter === "all") {
+        return true
+      }
+
+      // If location hasn't been detected,
+      // distance cannot be calculated
+      if (donation.distance === null) {
+        return false
+      }
+
+      return (
+        donation.distance <= Number(distanceFilter)
+      )
+    }
+  )
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -124,8 +151,8 @@ function Food() {
           </h1>
 
           <p className="mt-4 max-w-2xl text-lg text-gray-600">
-            Discover surplus food available for rescue and
-            help connect it with people who need it.
+            Discover surplus food available for rescue
+            and help connect it with people who need it.
           </p>
 
         </div>
@@ -221,6 +248,32 @@ function Food() {
               : "📍 Get My Location"}
           </button>
 
+          {/* Distance Filter */}
+          <select
+            value={distanceFilter}
+            onChange={(event) =>
+              setDistanceFilter(event.target.value)
+            }
+            className="rounded-full border bg-white px-5 py-3
+            text-sm outline-none"
+          >
+            <option value="all">
+              📍 All Distances
+            </option>
+
+            <option value="2">
+              Within 2 km
+            </option>
+
+            <option value="5">
+              Within 5 km
+            </option>
+
+            <option value="10">
+              Within 10 km
+            </option>
+          </select>
+
         </div>
 
         {/* Location Error */}
@@ -248,20 +301,21 @@ function Food() {
             </h2>
 
             <p className="text-sm text-gray-500">
-              {sortedDonations.length} results
+              {nearbyDonations.length} results
             </p>
 
           </div>
 
           {/* Food Cards */}
-          {sortedDonations.length > 0 ? (
+          {nearbyDonations.length > 0 ? (
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
 
-              {sortedDonations.map((donation) => (
+              {nearbyDonations.map((donation) => (
                 <FoodCard
                   key={donation.id}
                   donation={donation}
+                  distance={donation.distance}
                 />
               ))}
 
@@ -274,11 +328,12 @@ function Food() {
               px-6 py-16 text-center">
 
               <h3 className="text-xl font-bold">
-                No food found
+                No food found nearby
               </h3>
 
               <p className="mt-2 text-gray-500">
-                Try changing your search or filters.
+                Try increasing the distance or changing
+                your search filters.
               </p>
 
             </div>

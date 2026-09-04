@@ -50,6 +50,9 @@ function Navbar() {
           >
             Dashboard
           </Link>
+          <Link to="/my-rescues">
+  My Rescues
+</Link>
 
           <Link
             to="/donate"

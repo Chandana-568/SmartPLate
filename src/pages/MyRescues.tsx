@@ -1,74 +1,253 @@
+import { Clock, MapPin, Users, ArrowRight } from "lucide-react"
+import { Link } from "react-router-dom"
+
 import { useCharityStore } from "../store/useCharityStore"
 
 function MyRescues() {
-  const donations = useCharityStore((state) => state.donations)
-
-  const claimedDonations = donations.filter(
-    (donation) => donation.status === "claimed"
+  const donations = useCharityStore(
+    (state) => state.donations
   )
 
+  const updateDonationStatus = useCharityStore(
+    (state) => state.updateDonationStatus
+  )
+
+  const claimedDonations = donations.filter(
+    (donation) =>
+      donation.status === "claimed" ||
+      donation.status === "picked-up" ||
+      donation.status === "completed"
+  )
+
+  const handlePickup = (id: string) => {
+    updateDonationStatus(id, "picked-up")
+  }
+
+  const handleComplete = (id: string) => {
+    updateDonationStatus(id, "completed")
+  }
+
   return (
-    <main className="min-h-screen bg-gray-50 px-6 py-16">
-      <div className="mx-auto max-w-7xl">
+    <main className="min-h-screen bg-gray-50">
 
-        <p className="text-sm font-semibold uppercase tracking-widest">
-          Volunteer
-        </p>
+      {/* Header */}
+      <section className="border-b bg-white">
+        <div className="mx-auto max-w-7xl px-6 py-16">
 
-        <h1 className="mt-4 text-4xl font-bold md:text-5xl">
-          My Rescues
-        </h1>
+          <p className="text-sm font-semibold uppercase tracking-widest">
+            Your Impact
+          </p>
 
-        <p className="mt-4 max-w-2xl text-lg text-gray-600">
-          Food donations you have claimed and helped rescue.
-        </p>
+          <h1 className="mt-4 text-4xl font-bold md:text-5xl">
+            My Rescues
+          </h1>
 
-        <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {claimedDonations.length > 0 ? (
-            claimedDonations.map((donation) => (
-              <div
-                key={donation.id}
-                className="overflow-hidden rounded-3xl border bg-white"
-              >
-                <img
-                  src={donation.image}
-                  alt={donation.title}
-                  className="h-56 w-full object-cover"
-                />
+          <p className="mt-4 max-w-2xl text-lg text-gray-600">
+            Keep track of the food donations you've
+            rescued from the community.
+          </p>
 
-                <div className="p-6">
-                  <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-                    Rescued
-                  </span>
+        </div>
+      </section>
 
-                  <h2 className="mt-4 text-xl font-bold">
-                    {donation.title}
-                  </h2>
+      {/* Rescues */}
+      <section className="mx-auto max-w-7xl px-6 py-12">
 
-                  <p className="mt-2 text-sm text-gray-600">
-                    {donation.location}
-                  </p>
+        {claimedDonations.length === 0 ? (
 
-                  <p className="mt-3 text-sm text-gray-500">
-                    {donation.quantity} meals rescued
-                  </p>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="rounded-3xl border bg-white px-6 py-16 text-center md:col-span-2 lg:col-span-3">
-              <h2 className="text-xl font-bold">
-                No rescues yet
+          /* Empty State */
+          <div className="rounded-3xl border bg-white px-6 py-20 text-center">
+
+            <div className="mx-auto flex h-16 w-16 items-center
+              justify-center rounded-full bg-gray-100 text-3xl">
+              🍱
+            </div>
+
+            <h2 className="mt-6 text-2xl font-bold">
+              No rescues yet
+            </h2>
+
+            <p className="mx-auto mt-3 max-w-md text-gray-500">
+              You haven't claimed any food yet.
+              Find available food and make your first rescue.
+            </p>
+
+            <Link
+              to="/food"
+              className="mt-8 inline-flex items-center gap-2
+              rounded-full bg-black px-6 py-3 font-semibold
+              text-white transition hover:bg-gray-800"
+            >
+              Find Food
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+
+          </div>
+
+        ) : (
+
+          <>
+            {/* Results Header */}
+            <div className="mb-8">
+
+              <h2 className="text-2xl font-bold">
+                Your Rescued Food
               </h2>
 
-              <p className="mt-2 text-gray-500">
-                Claim a food donation to see it here.
+              <p className="mt-1 text-sm text-gray-500">
+                {claimedDonations.length} rescue
+                {claimedDonations.length !== 1 ? "s" : ""}
               </p>
-            </div>
-          )}
-        </div>
 
-      </div>
+            </div>
+
+            {/* Cards */}
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+
+              {claimedDonations.map((donation) => (
+
+                <div
+                  key={donation.id}
+                  className="overflow-hidden rounded-3xl
+                  border bg-white shadow-sm transition
+                  hover:-translate-y-1 hover:shadow-lg"
+                >
+
+                  {/* Image */}
+                  <div className="relative h-52 overflow-hidden">
+
+                    <img
+                      src={donation.image}
+                      alt={donation.title}
+                      className="h-full w-full object-cover"
+                    />
+
+                    {/* Status */}
+                    <div className="absolute left-4 top-4">
+
+                      <span
+                        className={`rounded-full px-3 py-1
+                        text-xs font-semibold ${
+                          donation.status === "claimed"
+                            ? "bg-yellow-100 text-yellow-700"
+                            : donation.status === "picked-up"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-green-100 text-green-700"
+                        }`}
+                      >
+                        {donation.status === "claimed"
+                          ? "Claimed"
+                          : donation.status === "picked-up"
+                            ? "Picked Up"
+                            : "Completed"}
+                      </span>
+
+                    </div>
+
+                  </div>
+
+                  {/* Content */}
+                  <div className="p-6">
+
+                    <h3 className="text-xl font-bold">
+                      {donation.title}
+                    </h3>
+
+                    <p className="mt-2 text-sm leading-6 text-gray-600">
+                      {donation.description}
+                    </p>
+
+                    <div className="mt-5 space-y-3 text-sm text-gray-600">
+
+                      {/* Quantity */}
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        <span>
+                          {donation.quantity} meals
+                        </span>
+                      </div>
+
+                      {/* Location */}
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        <span>
+                          {donation.location}
+                        </span>
+                      </div>
+
+                      {/* Pickup */}
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4" />
+                        <span>
+                          Pickup before{" "}
+                          {donation.pickupBefore}
+                        </span>
+                      </div>
+
+                    </div>
+
+                    {/* Action Buttons */}
+
+                    {donation.status === "claimed" && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handlePickup(donation.id)
+                        }
+                        className="mt-6 w-full rounded-full
+                        bg-black px-5 py-3 font-semibold
+                        text-white transition hover:bg-gray-800"
+                      >
+                        Mark as Picked Up
+                      </button>
+                    )}
+
+                    {donation.status === "picked-up" && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleComplete(donation.id)
+                        }
+                        className="mt-6 w-full rounded-full
+                        bg-black px-5 py-3 font-semibold
+                        text-white transition hover:bg-gray-800"
+                      >
+                        Complete Rescue
+                      </button>
+                    )}
+
+                    {donation.status === "completed" && (
+                      <div
+                        className="mt-6 rounded-full bg-green-50
+                        px-5 py-3 text-center font-semibold
+                        text-green-700"
+                      >
+                        ✓ Rescue Completed
+                      </div>
+                    )}
+
+                    {/* Details */}
+                    <Link
+                      to={`/food/${donation.id}`}
+                      className="mt-3 block w-full rounded-full
+                      border px-5 py-3 text-center font-semibold
+                      transition hover:bg-gray-50"
+                    >
+                      View Details
+                    </Link>
+
+                  </div>
+
+                </div>
+
+              ))}
+
+            </div>
+          </>
+
+        )}
+
+      </section>
     </main>
   )
 }

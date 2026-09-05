@@ -1,28 +1,96 @@
 import { Search } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 import FoodCard from "../components/FoodCard"
+import { getDonationsFromFirestore } from "../services/donationService"
 import { useCharityStore } from "../store/useCharityStore"
 import { calculateDistance } from "../utils/distance"
+import type { FoodDonation } from "../types"
 
 function Food() {
-  const donations = useCharityStore((state) => state.donations)
+  const addDonation = useCharityStore(
+    (state) => state.addDonation
+  )
+
+  const [donations, setDonations] = useState<
+    FoodDonation[]
+  >([])
 
   const [search, setSearch] = useState("")
   const [foodType, setFoodType] = useState("all")
   const [urgency, setUrgency] = useState("all")
 
-  // User location
-  const [userLatitude, setUserLatitude] = useState<number | null>(null)
-  const [userLongitude, setUserLongitude] = useState<number | null>(null)
+  const [userLatitude, setUserLatitude] =
+    useState<number | null>(null)
 
-  const [locationLoading, setLocationLoading] = useState(false)
-  const [locationError, setLocationError] = useState("")
+  const [userLongitude, setUserLongitude] =
+    useState<number | null>(null)
 
-  // Distance filter
-  const [distanceFilter, setDistanceFilter] = useState("all")
+  const [locationLoading, setLocationLoading] =
+    useState(false)
 
-  // Get user's current location
+  const [locationError, setLocationError] =
+    useState("")
+
+  const [distanceFilter, setDistanceFilter] =
+    useState("all")
+
+  const [loading, setLoading] = useState(true)
+
+  const [firebaseError, setFirebaseError] =
+    useState("")
+
+  // --------------------------------
+  // Load donations from Firestore
+  // --------------------------------
+
+  useEffect(() => {
+    const loadDonations = async () => {
+      try {
+        setLoading(true)
+        setFirebaseError("")
+
+        console.log(
+          "Loading donations from Firebase..."
+        )
+
+        const firestoreDonations =
+          await getDonationsFromFirestore()
+
+        console.log(
+          "Firebase donations:",
+          firestoreDonations
+        )
+
+        setDonations(firestoreDonations)
+
+        // Keep Zustand synchronized
+        firestoreDonations.forEach((donation) => {
+          addDonation(donation)
+        })
+      } catch (error) {
+        console.error(
+          "Error loading donations from Firebase:",
+          error
+        )
+
+        setFirebaseError(
+          "Unable to load donations from Firebase."
+        )
+
+        setDonations([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadDonations()
+  }, [addDonation])
+
+  // --------------------------------
+  // Get user's location
+  // --------------------------------
+
   const getUserLocation = () => {
     if (!navigator.geolocation) {
       setLocationError(
@@ -36,8 +104,13 @@ function Food() {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setUserLatitude(position.coords.latitude)
-        setUserLongitude(position.coords.longitude)
+        setUserLatitude(
+          position.coords.latitude
+        )
+
+        setUserLongitude(
+          position.coords.longitude
+        )
 
         setLocationLoading(false)
       },
@@ -51,41 +124,57 @@ function Food() {
     )
   }
 
-  // Show only available donations
-  const availableDonations = donations.filter(
-    (donation) => donation.status === "available"
-  )
+  // --------------------------------
+  // Available donations
+  // --------------------------------
 
-  // Search + existing filters
-  const filteredDonations = availableDonations.filter(
-    (donation) => {
-      const matchesSearch =
-        `${donation.title} ${donation.location} ${donation.foodType}`
-          .toLowerCase()
-          .includes(search.toLowerCase())
+  const availableDonations =
+    donations.filter(
+      (donation) =>
+        donation.status === "available"
+    )
 
-      const matchesFoodType =
-        foodType === "all" ||
-        donation.foodType === foodType
+  // --------------------------------
+  // Search + filters
+  // --------------------------------
 
-      const matchesUrgency =
-        urgency === "all" ||
-        donation.urgency === urgency
+  const filteredDonations =
+    availableDonations.filter(
+      (donation) => {
+        const matchesSearch =
+          `${donation.title} ${donation.location} ${donation.foodType}`
+            .toLowerCase()
+            .includes(
+              search.toLowerCase()
+            )
 
-      return (
-        matchesSearch &&
-        matchesFoodType &&
-        matchesUrgency
-      )
-    }
-  )
+        const matchesFoodType =
+          foodType === "all" ||
+          donation.foodType === foodType
 
-  // Calculate distance for every donation
-  const donationsWithDistance = filteredDonations.map(
-    (donation) => {
+        const matchesUrgency =
+          urgency === "all" ||
+          donation.urgency === urgency
+
+        return (
+          matchesSearch &&
+          matchesFoodType &&
+          matchesUrgency
+        )
+      }
+    )
+
+  // --------------------------------
+  // Calculate distance
+  // --------------------------------
+
+  const donationsWithDistance =
+    filteredDonations.map((donation) => {
       if (
         userLatitude === null ||
-        userLongitude === null
+        userLongitude === null ||
+        donation.latitude == null ||
+        donation.longitude == null
       ) {
         return {
           ...donation,
@@ -102,43 +191,58 @@ function Food() {
           donation.longitude
         ),
       }
-    }
-  )
+    })
 
-  // Sort nearest → farthest
-  const sortedDonations = [...donationsWithDistance].sort(
-    (a, b) => {
-      if (a.distance === null) return 1
-      if (b.distance === null) return -1
+  // --------------------------------
+  // Sort nearest first
+  // --------------------------------
 
-      return a.distance - b.distance
-    }
-  )
+  const sortedDonations =
+    [...donationsWithDistance].sort(
+      (a, b) => {
+        if (a.distance === null) {
+          return 1
+        }
 
-  // Apply distance filter
-  const nearbyDonations = sortedDonations.filter(
-    (donation) => {
-      // Show everything when no distance filter is selected
-      if (distanceFilter === "all") {
-        return true
+        if (b.distance === null) {
+          return -1
+        }
+
+        return a.distance - b.distance
       }
+    )
 
-      // If location hasn't been detected,
-      // distance cannot be calculated
-      if (donation.distance === null) {
-        return false
+  // --------------------------------
+  // Distance filter
+  // --------------------------------
+
+  const nearbyDonations =
+    sortedDonations.filter(
+      (donation) => {
+        if (distanceFilter === "all") {
+          return true
+        }
+
+        if (donation.distance === null) {
+          return false
+        }
+
+        return (
+          donation.distance <=
+          Number(distanceFilter)
+        )
       }
+    )
 
-      return (
-        donation.distance <= Number(distanceFilter)
-      )
-    }
-  )
+  // --------------------------------
+  // UI
+  // --------------------------------
 
   return (
     <main className="min-h-screen bg-gray-50">
 
-      {/* Page Header */}
+      {/* Header */}
+
       <section className="border-b bg-white">
         <div className="mx-auto max-w-7xl px-6 py-16">
 
@@ -151,17 +255,20 @@ function Food() {
           </h1>
 
           <p className="mt-4 max-w-2xl text-lg text-gray-600">
-            Discover surplus food available for rescue
-            and help connect it with people who need it.
+            Discover surplus food available for
+            rescue and help connect it with people
+            who need it.
           </p>
 
         </div>
       </section>
 
-      {/* Search & Filters */}
+      {/* Search + Filters */}
+
       <section className="mx-auto max-w-7xl px-6 py-12">
 
         {/* Search */}
+
         <div className="relative max-w-xl">
 
           <Search
@@ -184,9 +291,11 @@ function Food() {
         </div>
 
         {/* Filters */}
+
         <div className="mt-4 flex flex-wrap gap-3">
 
           {/* Food Type */}
+
           <select
             value={foodType}
             onChange={(event) =>
@@ -209,6 +318,7 @@ function Food() {
           </select>
 
           {/* Urgency */}
+
           <select
             value={urgency}
             onChange={(event) =>
@@ -234,7 +344,8 @@ function Food() {
             </option>
           </select>
 
-          {/* Get Location */}
+          {/* Location */}
+
           <button
             type="button"
             onClick={getUserLocation}
@@ -248,7 +359,8 @@ function Food() {
               : "📍 Get My Location"}
           </button>
 
-          {/* Distance Filter */}
+          {/* Distance */}
+
           <select
             value={distanceFilter}
             onChange={(event) =>
@@ -277,6 +389,7 @@ function Food() {
         </div>
 
         {/* Location Error */}
+
         {locationError && (
           <p className="mt-4 text-sm text-red-600">
             {locationError}
@@ -284,6 +397,7 @@ function Food() {
         )}
 
         {/* Location Success */}
+
         {userLatitude !== null &&
           userLongitude !== null && (
             <p className="mt-4 text-sm text-green-600">
@@ -291,7 +405,16 @@ function Food() {
             </p>
           )}
 
+        {/* Firebase Error */}
+
+        {firebaseError && (
+          <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
+            {firebaseError}
+          </p>
+        )}
+
         {/* Results */}
+
         <div className="mt-10">
 
           <div className="mb-6 flex items-center justify-between">
@@ -300,40 +423,53 @@ function Food() {
               Available food
             </h2>
 
-            <p className="text-sm text-gray-500">
-              {nearbyDonations.length} results
-            </p>
+            {!loading && (
+              <p className="text-sm text-gray-500">
+                {nearbyDonations.length} results
+              </p>
+            )}
 
           </div>
 
-          {/* Food Cards */}
-          {nearbyDonations.length > 0 ? (
+          {/* Loading */}
+
+          {loading ? (
+
+            <div className="rounded-3xl border bg-white px-6 py-16 text-center">
+
+              <p className="text-gray-500">
+                Loading available food...
+              </p>
+
+            </div>
+
+          ) : nearbyDonations.length > 0 ? (
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
 
-              {nearbyDonations.map((donation) => (
-                <FoodCard
-                  key={donation.id}
-                  donation={donation}
-                  distance={donation.distance}
-                />
-              ))}
+              {nearbyDonations.map(
+                (donation) => (
+                  <FoodCard
+                    key={donation.id}
+                    donation={donation}
+                    distance={donation.distance}
+                  />
+                )
+              )}
 
             </div>
 
           ) : (
 
-            /* No Results */
-            <div className="rounded-3xl border bg-white
-              px-6 py-16 text-center">
+            <div className="rounded-3xl border bg-white px-6 py-16 text-center">
 
               <h3 className="text-xl font-bold">
                 No food found nearby
               </h3>
 
               <p className="mt-2 text-gray-500">
-                Try increasing the distance or changing
-                your search filters.
+                Try increasing the distance or
+                changing your search filters.
               </p>
 
             </div>
@@ -343,6 +479,7 @@ function Food() {
         </div>
 
       </section>
+
     </main>
   )
 }

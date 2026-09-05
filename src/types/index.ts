@@ -13,11 +13,14 @@ export interface FoodDonation {
   quantity: number
   foodType: string
   location: string
-  latitude: number
-  longitude: number
+  latitude: number | null
+  longitude: number | null
   pickupBefore: string
   urgency: Urgency
   status: FoodStatus
   donorName: string
+  donorId: string
+  donorEmail: string
   image: string
+rescuedBy: string | null
 }

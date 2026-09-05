@@ -1,3 +1,4 @@
+import { useAuth } from "../context/AuthContext"
 import {
   CheckCircle,
   Clock,
@@ -8,6 +9,7 @@ import {
 import { useCharityStore } from "../store/useCharityStore"
 
 function Dashboard() {
+  const { user } = useAuth()
   const donations = useCharityStore(
     (state) => state.donations
   )
@@ -88,9 +90,13 @@ function Dashboard() {
             Your Impact
           </p>
 
-          <h1 className="mt-4 text-4xl font-bold md:text-5xl">
-            Dashboard
-          </h1>
+         <h1 className="mt-4 text-4xl font-bold md:text-5xl">
+  Welcome back, {user?.displayName || "User"} 👋
+</h1>
+
+<p className="mt-3 text-sm text-gray-500">
+  {user?.email}
+</p>
 
           <p className="mt-4 max-w-2xl text-lg text-gray-600">
             See how your community food rescue activity

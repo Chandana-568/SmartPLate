@@ -187,6 +187,71 @@ function MyRescues() {
                     </div>
 
                     {/* Action Buttons */}
+                    {/* Rescue Progress */}
+<div className="mt-6">
+
+  <p className="mb-3 text-sm font-semibold text-gray-700">
+    Rescue Progress
+  </p>
+
+  <div className="flex items-center">
+
+    {/* Claimed */}
+    <div
+      className={`h-3 w-3 rounded-full ${
+        donation.status === "claimed" ||
+        donation.status === "picked-up" ||
+        donation.status === "completed"
+          ? "bg-black"
+          : "bg-gray-200"
+      }`}
+    />
+
+    <div
+      className={`h-1 flex-1 ${
+        donation.status === "picked-up" ||
+        donation.status === "completed"
+          ? "bg-black"
+          : "bg-gray-200"
+      }`}
+    />
+
+    {/* Picked Up */}
+    <div
+      className={`h-3 w-3 rounded-full ${
+        donation.status === "picked-up" ||
+        donation.status === "completed"
+          ? "bg-black"
+          : "bg-gray-200"
+      }`}
+    />
+
+    <div
+      className={`h-1 flex-1 ${
+        donation.status === "completed"
+          ? "bg-black"
+          : "bg-gray-200"
+      }`}
+    />
+
+    {/* Completed */}
+    <div
+      className={`h-3 w-3 rounded-full ${
+        donation.status === "completed"
+          ? "bg-black"
+          : "bg-gray-200"
+      }`}
+    />
+
+  </div>
+
+  <div className="mt-2 flex justify-between text-xs text-gray-500">
+    <span>Claimed</span>
+    <span>Picked Up</span>
+    <span>Completed</span>
+  </div>
+
+</div>
 
                     {donation.status === "claimed" && (
                       <button

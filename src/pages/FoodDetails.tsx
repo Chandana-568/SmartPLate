@@ -9,8 +9,15 @@ import { useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 
 import { useAuth } from "../context/auth"
+import AIInsightBox from "../components/AIInsightBox"
+import StatusTimeline from "../components/StatusTimeline"
 import { claimDonation } from "../services/donationService"
 import { useCharityStore } from "../store/useCharityStore"
+import {
+  formatTime,
+  isExpired,
+  isOpenForClaim,
+} from "../utils/donationStatus"
 
 function FoodDetails() {
   const { id } = useParams()
@@ -81,6 +88,8 @@ function FoodDetails() {
   }
 
   const canClaim = role === "ngo" || role === "admin"
+  const expired = isExpired(donation)
+  const open = isOpenForClaim(donation)
 
   // Claim donation (NGOs only)
   const handleClaim = async () => {
@@ -89,7 +98,7 @@ function FoodDetails() {
       return
     }
 
-    if (!profile || donation.status !== "available") return
+    if (!profile || !open) return
 
     try {
       setClaiming(true)
@@ -108,8 +117,9 @@ function FoodDetails() {
     }
   }
 
-  const claimLabel =
-    donation.status !== "available"
+  const claimLabel = expired
+    ? "Pickup time has passed"
+    : donation.status !== "available"
       ? donation.status === "claimed"
         ? `Claimed by ${donation.rescuedByName ?? "an NGO"}`
         : "Food Unavailable"
@@ -165,18 +175,26 @@ function FoodDetails() {
               <span
                 className={`inline-block rounded-full px-4 py-2
                 text-sm font-semibold ${
-                  donation.status === "available"
-                    ? "bg-green-100 text-green-700"
-                    : donation.status === "claimed"
-                      ? "bg-yellow-100 text-yellow-700"
-                      : "bg-gray-100 text-gray-700"
+                  expired
+                    ? "bg-red-100 text-red-700"
+                    : donation.status === "available"
+                      ? "bg-green-100 text-green-700"
+                      : donation.status === "claimed"
+                        ? "bg-yellow-100 text-yellow-700"
+                        : "bg-gray-100 text-gray-700"
                 }`}
               >
-                {donation.status === "available"
-                  ? "Available"
-                  : donation.status === "claimed"
-                    ? "Claimed"
-                    : donation.status}
+                {donation.status === "under_review"
+                  ? "Under Review"
+                  : expired
+                  ? "Expired"
+                  : donation.status === "available"
+                    ? "Available"
+                    : donation.status === "claimed"
+                      ? "Claimed"
+                      : donation.status === "picked-up"
+                        ? "Picked Up"
+                        : "Delivered"}
               </span>
 
               {/* Urgency */}
@@ -283,8 +301,9 @@ function FoodDetails() {
                       Pickup Before
                     </p>
 
-                    <p className="font-semibold">
-                      {donation.pickupBefore}
+                    <p className={`font-semibold ${expired ? "text-red-600" : ""}`}>
+                      {formatTime(donation.pickupBefore)}
+                      {expired && " (expired)"}
                     </p>
                   </div>
 
@@ -329,7 +348,7 @@ function FoodDetails() {
                 type="button"
                 onClick={handleClaim}
                 disabled={
-                  donation.status !== "available" ||
+                  !open ||
                   claiming ||
                   (Boolean(user) && !canClaim)
                 }
@@ -347,6 +366,18 @@ function FoodDetails() {
                   {claimError}
                 </p>
               )}
+
+              {donation.aiAnalysis && (
+                <div className="mt-8">
+                  <AIInsightBox analysis={donation.aiAnalysis} />
+                </div>
+              )}
+
+              {/* Live delivery timeline */}
+              <div className="mt-10 border-t pt-8">
+                <h2 className="mb-5 text-lg font-bold">Delivery progress</h2>
+                <StatusTimeline donation={donation} />
+              </div>
 
             </div>
 

@@ -61,11 +61,27 @@ export function AuthProvider({
 
   const role: Role | null = isAdmin ? "admin" : profile?.role ?? null
 
+  // Bootstrap admins may have no users/{uid} doc: give them an in-memory one
+  // so actions that need a name (claim, pickup) still work.
+  const effectiveProfile: UserProfile | null =
+    profile ??
+    (isAdmin && user
+      ? {
+          uid: user.uid,
+          name: user.displayName || "SharePlate Admin",
+          email: user.email ?? "",
+          role: "admin",
+          orgName: "SharePlate Admin",
+          phone: "",
+          createdAt: 0,
+        }
+      : null)
+
   return (
     <AuthContext.Provider
       value={{
         user,
-        profile,
+        profile: effectiveProfile,
         role,
         isAdmin,
         loading: authLoading || profileLoading,

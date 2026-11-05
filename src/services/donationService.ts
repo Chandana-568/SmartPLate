@@ -1,36 +1,50 @@
 import {
-  addDoc,
   collection,
   doc,
+  getDoc,
   onSnapshot,
   runTransaction,
   updateDoc,
+  writeBatch,
 } from "firebase/firestore"
 
 import { db } from "../firebase"
+import { generatePickupCode } from "../utils/donationStatus"
 
 import type { FoodDonation, UserProfile } from "../types"
 
 const donationsCollection = collection(db, "donations")
+
+// donations/{id}/private/otp holds the pickup code. Only the donor (and admins)
+// can read it; firestore.rules compares the volunteer's code against it.
+const otpRef = (donationId: string) =>
+  doc(db, "donations", donationId, "private", "otp")
 
 export type NewDonation = Omit<
   FoodDonation,
   "id" | "status" | "rescuedBy" | "createdAt"
 >
 
-// Add donation to Firestore. Firestore generates the id.
+// Add donation + its private pickup code in one atomic write.
+// High-risk donations start as "under_review" (hidden until an admin approves).
 export const addDonationToFirestore = async (
-  donation: NewDonation
+  donation: NewDonation,
+  status: "available" | "under_review" = "available"
 ): Promise<string> => {
-  const docRef = await addDoc(donationsCollection, {
+  const ref = doc(donationsCollection)
+  const batch = writeBatch(db)
+
+  batch.set(ref, {
     ...donation,
-    status: "available",
+    status,
     rescuedBy: null,
     volunteerId: null,
     createdAt: Date.now(),
   })
+  batch.set(otpRef(ref.id), { code: generatePickupCode() })
 
-  return docRef.id
+  await batch.commit()
+  return ref.id
 }
 
 // Live subscription to all donations, newest first.
@@ -81,17 +95,55 @@ export const claimDonation = async (
   })
 }
 
-// Volunteer (or the claiming NGO) picks the food up from the donor
+// Volunteer accepts a delivery task. Transaction stops two volunteers
+// taking the same task.
+export const acceptTask = async (
+  donationId: string,
+  volunteer: Pick<UserProfile, "uid" | "name">
+) => {
+  const ref = doc(db, "donations", donationId)
+
+  await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(ref)
+    const data = snapshot.data()
+
+    if (!snapshot.exists() || data?.status !== "claimed") {
+      throw new Error("This task is no longer available.")
+    }
+
+    if (data.volunteerId) {
+      throw new Error("Another volunteer already accepted this task.")
+    }
+
+    transaction.update(ref, {
+      volunteerId: volunteer.uid,
+      volunteerName: volunteer.name,
+      assignedAt: Date.now(),
+    })
+  })
+}
+
+// Volunteer (or an NGO collecting it themselves) picks the food up.
+// The donor's 4-digit code is verified by firestore.rules.
 export const markPickedUp = async (
   donationId: string,
-  picker: Pick<UserProfile, "uid" | "name">
+  picker: Pick<UserProfile, "uid" | "name">,
+  pickupOtp: string
 ) => {
-  await updateDoc(doc(db, "donations", donationId), {
-    status: "picked-up",
-    volunteerId: picker.uid,
-    volunteerName: picker.name,
-    pickedUpAt: Date.now(),
-  })
+  try {
+    await updateDoc(doc(db, "donations", donationId), {
+      status: "picked-up",
+      volunteerId: picker.uid,
+      volunteerName: picker.name,
+      pickupOtp: pickupOtp.trim(),
+      pickedUpAt: Date.now(),
+    })
+  } catch (error) {
+    if ((error as { code?: string }).code === "permission-denied") {
+      throw new Error("Wrong pickup code. Ask the donor for their 4-digit code.")
+    }
+    throw error
+  }
 }
 
 // NGO confirms the food arrived
@@ -100,4 +152,26 @@ export const markCompleted = async (donationId: string) => {
     status: "completed",
     completedAt: Date.now(),
   })
+}
+
+// Admin approves a flagged listing so NGOs can see it
+export const approveDonation = async (donationId: string, adminUid: string) => {
+  await updateDoc(doc(db, "donations", donationId), {
+    status: "available",
+    reviewedBy: adminUid,
+  })
+}
+
+// Donor withdraws food that nobody has claimed yet (admins: reject a flagged listing)
+export const cancelDonation = async (donationId: string) => {
+  const batch = writeBatch(db)
+  batch.delete(otpRef(donationId))
+  batch.delete(doc(db, "donations", donationId))
+  await batch.commit()
+}
+
+// Donor reads their own pickup code (null for donations made before codes existed)
+export const getPickupCode = async (donationId: string) => {
+  const snapshot = await getDoc(otpRef(donationId))
+  return snapshot.exists() ? (snapshot.data().code as string) : null
 }

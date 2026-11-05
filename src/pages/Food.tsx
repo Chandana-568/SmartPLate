@@ -4,6 +4,7 @@ import { useState } from "react"
 import FoodCard from "../components/FoodCard"
 import { useCharityStore } from "../store/useCharityStore"
 import { calculateDistance } from "../utils/distance"
+import { isOpenForClaim } from "../utils/donationStatus"
 
 function Food() {
   // Live data from the app-wide Firestore subscription
@@ -71,11 +72,9 @@ function Food() {
   // Available donations
   // --------------------------------
 
+  // Unclaimed and still before its pickup deadline
   const availableDonations =
-    donations.filter(
-      (donation) =>
-        donation.status === "available"
-    )
+    donations.filter((donation) => isOpenForClaim(donation))
 
   // --------------------------------
   // Search + filters

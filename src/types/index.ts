@@ -47,12 +47,17 @@ export interface FoodDonation {
   rescuedBy: string | null
   rescuedByName?: string
 
-  // Volunteer who picked it up
+  // Volunteer who accepted the task / picked it up
   volunteerId?: string | null
   volunteerName?: string
 
+  // Code the volunteer entered at pickup (checked by firestore.rules
+  // against donations/{id}/private/otp, which only the donor can read)
+  pickupOtp?: string
+
   createdAt?: number
   claimedAt?: number
+  assignedAt?: number
   pickedUpAt?: number
   completedAt?: number
 }

@@ -55,13 +55,30 @@ service cloud.firestore {
         && request.resource.data.donorId == request.auth.uid
         && request.resource.data.status == 'available';
 
+      function otpPath() {
+        return /databases/$(database)/documents/donations/$(donationId)/private/otp;
+      }
+
+      // Donations made before pickup codes existed have no otp doc
+      function pickupCodeMatches() {
+        return !exists(otpPath())
+          || request.resource.data.pickupOtp == get(otpPath()).data.code;
+      }
+
+      function assignedVolunteer() {
+        return resource.data.get('volunteerId', null);
+      }
+
       allow update: if isAdmin()
 
-        // Donor edits details while the status stays the same
+        // Donor edits details; delivery fields are off limits
         || (signedIn()
             && resource.data.donorId == request.auth.uid
             && request.resource.data.status == resource.data.status
-            && request.resource.data.donorId == resource.data.donorId)
+            && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+                 'donorId', 'rescuedBy', 'rescuedByName', 'volunteerId',
+                 'volunteerName', 'pickupOtp', 'claimedAt', 'assignedAt',
+                 'pickedUpAt', 'completedAt']))
 
         // NGO claims available food for itself
         || (hasRole('ngo')
@@ -70,12 +87,25 @@ service cloud.firestore {
             && request.resource.data.rescuedBy == request.auth.uid
             && changedOnly(['status', 'rescuedBy', 'rescuedByName', 'claimedAt']))
 
-        // Volunteer (or the claiming NGO) picks it up
-        || ((hasRole('volunteer') || resource.data.rescuedBy == request.auth.uid)
+        // Volunteer accepts a claimed task nobody has taken yet
+        || (hasRole('volunteer')
+            && resource.data.status == 'claimed'
+            && assignedVolunteer() == null
+            && request.resource.data.volunteerId == request.auth.uid
+            && changedOnly(['volunteerId', 'volunteerName', 'assignedAt']))
+
+        // Assigned volunteer (or the NGO collecting it itself) picks it up
+        // with the donor's correct 4-digit code
+        || (signedIn()
             && resource.data.status == 'claimed'
             && request.resource.data.status == 'picked-up'
             && request.resource.data.volunteerId == request.auth.uid
-            && changedOnly(['status', 'volunteerId', 'volunteerName', 'pickedUpAt']))
+            && (assignedVolunteer() == request.auth.uid
+                || (resource.data.rescuedBy == request.auth.uid
+                    && assignedVolunteer() == null))
+            && pickupCodeMatches()
+            && changedOnly(['status', 'volunteerId', 'volunteerName',
+                            'pickupOtp', 'pickedUpAt']))
 
         // NGO or volunteer confirms delivery
         || (signedIn()
@@ -85,8 +115,29 @@ service cloud.firestore {
             && request.resource.data.status == 'completed'
             && changedOnly(['status', 'completedAt']));
 
+      // Donors can cancel only food nobody has claimed yet
       allow delete: if isAdmin()
-        || (signedIn() && resource.data.donorId == request.auth.uid);
+        || (signedIn()
+            && resource.data.donorId == request.auth.uid
+            && resource.data.status == 'available');
+
+      // ---------- donations/{id}/private/otp (pickup code) ----------
+      match /private/{docId} {
+        function parentPath() {
+          return /databases/$(database)/documents/donations/$(donationId);
+        }
+
+        allow read: if isAdmin()
+          || (signedIn() && get(parentPath()).data.donorId == request.auth.uid);
+
+        // Created in the same batch as the donation, so check the result
+        allow create: if signedIn()
+          && getAfter(parentPath()).data.donorId == request.auth.uid
+          && request.resource.data.code is string;
+
+        allow delete: if isAdmin()
+          || (signedIn() && get(parentPath()).data.donorId == request.auth.uid);
+      }
     }
   }
 }

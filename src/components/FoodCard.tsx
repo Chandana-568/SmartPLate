@@ -1,6 +1,7 @@
 import { Clock, MapPin, Users, Navigation } from "lucide-react"
 import { Link } from "react-router-dom"
 import type { FoodDonation } from "../types"
+import { formatTime } from "../utils/donationStatus"
 
 interface FoodCardProps {
   donation: FoodDonation
@@ -9,9 +10,16 @@ interface FoodCardProps {
 
 function FoodCard({ donation, distance }: FoodCardProps) {
   const openInMaps = () => {
-    const url = `https://www.google.com/maps/search/?api=1&query=${donation.latitude},${donation.longitude}`
+    const query =
+      donation.latitude != null && donation.longitude != null
+        ? `${donation.latitude},${donation.longitude}`
+        : encodeURIComponent(donation.location)
 
-    window.open(url, "_blank")
+    window.open(
+      `https://www.google.com/maps/search/?api=1&query=${query}`,
+      "_blank",
+      "noopener"
+    )
   }
 
   return (
@@ -82,7 +90,7 @@ function FoodCard({ donation, distance }: FoodCardProps) {
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
             <span>
-              Pickup before {donation.pickupBefore}
+              Pickup before {formatTime(donation.pickupBefore)}
             </span>
           </div>
 

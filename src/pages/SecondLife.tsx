@@ -13,6 +13,7 @@ import {
   expiryMs,
   KG_PER_SERVING,
   PARTNER_TYPES,
+  awaitingSecondLife,
   ROUTE_LABEL,
   secondLifeAdvice,
   suitability,
@@ -40,11 +41,18 @@ function SecondLife() {
       ? calculateDistance(lat, lng, d.latitude, d.longitude)
       : null
 
-  const open = donations
-    .filter((d) => d.status === "available" && !d.secondLife && typeof d.expiresAt === "number")
+  // Every expired listing nobody collected (including food an NGO claimed
+  // too late), split into what this partner may take and what it may not
+  const expired = donations
+    .filter((d) => awaitingSecondLife(d, now))
     .map((d) => ({ donation: d, fit: suitability(d, partnerType, now), km: distanceTo(d) }))
-    .filter((item) => item.fit.ok)
     .sort((a, b) => (a.km ?? 9999) - (b.km ?? 9999) || expiryMs(b.donation) - expiryMs(a.donation))
+
+  const open = expired.filter((item) => item.fit.ok)
+  const notForYou = expired.filter(
+    (item): item is typeof item & { fit: { ok: false; reason: string } } =>
+      !item.fit.ok && item.fit.reason !== "Too old to collect"
+  )
 
   const mine = donations
     .filter((d) => d.secondLife?.partnerId === user.uid)
@@ -183,6 +191,29 @@ function SecondLife() {
                   )
                 )}
               </div>
+            )}
+
+            {/* Nothing is silently hidden: show what's expired but not for this partner, and why */}
+            {notForYou.length > 0 && (
+              <details className="mt-8 rounded-3xl border bg-white p-5">
+                <summary className="cursor-pointer text-sm font-semibold text-gray-700">
+                  Not suitable for your {type.label.toLowerCase()} ({notForYou.length}): other partners will collect these
+                </summary>
+                <ul className="mt-4 divide-y text-sm">
+                  {notForYou.map(({ donation, fit, km }) => (
+                    <li key={donation.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
+                      <span>
+                        <span className="font-semibold">{donation.title}</span>
+                        <span className="text-gray-500">
+                          {" "}· {donation.location}
+                          {km != null && ` · ${km.toFixed(1)} km`}
+                        </span>
+                      </span>
+                      <span className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-600">{fit.reason}</span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
             )}
 
             {mine.length > 0 && (

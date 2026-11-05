@@ -237,6 +237,15 @@ async function main() {
   await expectAllowed("Partner marks it collected", () =>
     updateDoc(doc(partner.db, "donations", expiringId), secondLife(partner, "collected")))
 
+  // ---------- Claimed by an NGO, but expired before pickup ----------
+  const lateId = await postDonation(donor, { expiresAt: Date.now() + 2500 }, "2468")
+  await claim(ngo, lateId)
+  await new Promise((resolve) => setTimeout(resolve, 3500))
+  await expectDenied("Volunteer can't accept a task whose food expired", () => accept(volunteer, lateId))
+  await expectDenied("NGO can't pick up expired food, even with the right code", () => pickUp(ngo, lateId, "2468"))
+  await expectAllowed("Partner can take food an NGO claimed but didn't collect in time", () =>
+    updateDoc(doc(partner.db, "donations", lateId), secondLife(partner, "claimed")))
+
   // ---------- Report ----------
   const failed = results.filter((r) => !r.ok)
   console.log("")

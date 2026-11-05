@@ -4,6 +4,7 @@ import { useAuth } from "../context/auth"
 import { useNow } from "../hooks/useNow"
 import { notifyNgos } from "../services/notifyService"
 import { useCharityStore } from "../store/useCharityStore"
+import { awaitingSecondLife } from "../utils/secondLife"
 
 const ALERT_WINDOW_MS = 2 * 60 * 60 * 1000 // matches the server
 
@@ -21,9 +22,10 @@ function ExpiryWatcher() {
     if (!user) return
     for (const d of donations) {
       if (alerted.current.has(d.id)) continue
-      if (d.status !== "available" || d.secondLife || typeof d.expiresAt !== "number") continue
-      if (!(now > d.expiresAt && now - d.expiresAt < ALERT_WINDOW_MS)) continue
-      if (d.donorId !== user.uid && !isAdmin) continue
+      // Unclaimed, or claimed by an NGO that didn't collect it in time
+      if (!awaitingSecondLife(d, now)) continue
+      if (now - (d.expiresAt as number) >= ALERT_WINDOW_MS) continue
+      if (d.donorId !== user.uid && d.rescuedBy !== user.uid && !isAdmin) continue
       alerted.current.add(d.id)
       notifyNgos("expired", d.id)
     }

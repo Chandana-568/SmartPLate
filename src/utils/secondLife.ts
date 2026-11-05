@@ -42,6 +42,21 @@ export function expiryMs(food: Pick<ExpiredFood, "expiresAt" | "pickupBefore">) 
   return typeof food.expiresAt === "number" ? food.expiresAt : new Date(food.pickupBefore).getTime()
 }
 
+// Expired before anyone picked it up, and no partner has it yet: it must go
+// to animals or compost. Includes food an NGO claimed but didn't collect in
+// time. Same conditions as firestore.rules (needs the exact expiresAt).
+export function awaitingSecondLife(
+  food: { status: string; expiresAt?: number; secondLife?: unknown },
+  now = Date.now()
+) {
+  return (
+    (food.status === "available" || food.status === "claimed") &&
+    !food.secondLife &&
+    typeof food.expiresAt === "number" &&
+    now > food.expiresAt
+  )
+}
+
 // Can this partner type safely take this food? Returns the reason if not.
 export function suitability(
   food: ExpiredFood,

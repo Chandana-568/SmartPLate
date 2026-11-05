@@ -10,6 +10,7 @@ import {
   KG_PER_SERVING,
   PARTNER_TYPES,
   ROUTE_LABEL,
+  awaitingSecondLife,
   suitability,
   type PartnerTypeId,
 } from "../src/utils/secondLife.ts"
@@ -98,14 +99,8 @@ function eventIsGenuine(event: NotifyEvent, d: Donation, now: number) {
     case "completed":
       return d.status === "completed" && recent(d.completedAt)
     case "expired":
-      // Really past its server-checked expiry, unclaimed, and only shortly after
-      return (
-        d.status === "available" &&
-        !d.secondLife &&
-        typeof d.expiresAt === "number" &&
-        now > d.expiresAt &&
-        now - d.expiresAt < EXPIRED_ALERT_WINDOW_MS
-      )
+      // Really past its expiry, never picked up, no partner yet, and recent
+      return awaitingSecondLife(d, now) && now - (d.expiresAt as number) < EXPIRED_ALERT_WINDOW_MS
   }
 }
 
@@ -170,6 +165,12 @@ export function buildMessage(event: NotifyEvent, d: Donation, link: string, km?:
     case "expired":
       return buildExpiredMessage(d, "compost", link, km)
   }
+}
+
+// Keeps the first (nearest) entry per phone number
+function uniqueByPhone<T extends { phone: string }>(list: T[]): T[] {
+  const seen = new Set<string>()
+  return list.filter((item) => !seen.has(item.phone) && Boolean(seen.add(item.phone)))
 }
 
 // Remembers recent sends so double-clicks don't double-message
@@ -240,10 +241,9 @@ export async function handleNotifyRequest(request: Request, env: Env): Promise<R
           : undefined,
       }))
     const located = suitable.filter((p) => p.km != null && p.km <= PARTNER_RADIUS_KM).sort((a, b) => a.km! - b.km!)
-    const chosen = (located.length ? located : suitable.filter((p) => p.km == null)).slice(0, MAX_NEARBY_NGOS)
-
-    const seenPhones = new Set<string>()
-    const unique = chosen.filter((p) => !seenPhones.has(p.phone) && Boolean(seenPhones.add(p.phone)))
+    // De-duplicate phones BEFORE taking the nearest few, so one phone shared
+    // by several accounts can't crowd out other partners
+    const unique = uniqueByPhone(located.length ? located : suitable.filter((p) => p.km == null)).slice(0, MAX_NEARBY_NGOS)
     if (unique.length === 0) return json(200, { sent: 0, skipped: "no opted-in partner to notify" })
 
     const partnerLink = `${site}/second-life`
@@ -271,17 +271,14 @@ export async function handleNotifyRequest(request: Request, env: Env): Promise<R
       .map((n) => ({ phone: n.phone, km: distanceKm(lat!, lng!, n.latitude!, n.longitude!) }))
       .filter((n) => n.km <= NEARBY_KM)
       .sort((a, b) => a.km - b.km)
-    // Nobody has shared a location yet: fall back to a few opted-in NGOs
-    recipients = located.length ? located : reachable.map((n) => ({ phone: n.phone }))
+    // Nobody has shared a location yet: fall back to a few opted-in NGOs.
+    // De-duplicate phones first (demo accounts often share one), then take the nearest.
+    recipients = uniqueByPhone(located.length ? located : reachable.map((n) => ({ phone: n.phone })))
     recipients = recipients.slice(0, MAX_NEARBY_NGOS)
   } else {
     const ngo = reachable.find((n) => n.id === donation.rescuedBy)
     if (ngo) recipients = [{ phone: ngo.phone }]
   }
-
-  // Several NGO accounts can share one phone (e.g. demo accounts): message it once
-  const seen = new Set<string>()
-  recipients = recipients.filter((r) => !seen.has(r.phone) && Boolean(seen.add(r.phone)))
 
   if (recipients.length === 0) return json(200, { sent: 0, skipped: "no opted-in NGO to notify" })
 

@@ -108,17 +108,21 @@ service cloud.firestore {
             && request.resource.data.rescuedBy == request.auth.uid
             && changedOnly(['status', 'rescuedBy', 'rescuedByName', 'claimedAt']))
 
-        // Volunteer accepts a claimed task nobody has taken yet
+        // Volunteer accepts a claimed task nobody has taken yet (not if expired)
         || (hasRole('volunteer')
             && resource.data.status == 'claimed'
+            && !isExpired()
+            && secondLife() == null
             && assignedVolunteer() == null
             && request.resource.data.volunteerId == request.auth.uid
             && changedOnly(['volunteerId', 'volunteerName', 'assignedAt']))
 
         // Assigned volunteer (or the NGO collecting it itself) picks it up
-        // with the donor's correct 4-digit code
+        // with the donor's correct 4-digit code, only while still safe to eat
         || (signedIn()
             && resource.data.status == 'claimed'
+            && !isExpired()
+            && secondLife() == null
             && request.resource.data.status == 'picked-up'
             && request.resource.data.volunteerId == request.auth.uid
             && (assignedVolunteer() == request.auth.uid
@@ -136,9 +140,10 @@ service cloud.firestore {
             && request.resource.data.status == 'completed'
             && changedOnly(['status', 'completedAt']))
 
-        // Second-life partner claims expired, unclaimed food for itself
+        // Second-life partner claims expired food that never got picked up,
+        // whether it was unclaimed or claimed by an NGO too late
         || (hasRole('partner')
-            && resource.data.status == 'available'
+            && resource.data.status in ['available', 'claimed']
             && isExpired()
             && secondLife() == null
             && request.resource.data.secondLife.partnerId == request.auth.uid

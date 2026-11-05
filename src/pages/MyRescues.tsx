@@ -50,14 +50,23 @@ function RescueCard({
   const myClaim = donation.rescuedBy === uid
   const unassigned = !donation.volunteerId
 
+  // Claimed, but its safe time ran out before pickup: not for people any more
+  const now = useNow()
+  const expiredBeforePickup =
+    donation.status === "claimed" &&
+    typeof donation.expiresAt === "number" &&
+    now > donation.expiresAt
+
   const canAccept =
     (role === "volunteer" || isAdmin) &&
     donation.status === "claimed" &&
+    !expiredBeforePickup &&
     unassigned
 
   // The assigned volunteer, or the NGO collecting it itself
   const canPickUp =
     donation.status === "claimed" &&
+    !expiredBeforePickup &&
     (mine || isAdmin || (myClaim && unassigned))
 
   const canComplete =
@@ -129,12 +138,20 @@ function RescueCard({
         </div>
 
         {/* Status messages */}
-        {donation.status === "claimed" && unassigned && myClaim && !isAdmin && (
+        {expiredBeforePickup && (
+          <p className="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+            ⚠️ Its safe time ran out before pickup, so it's no longer for people.{" "}
+            {donation.secondLife
+              ? `♻️ ${donation.secondLife.partnerName} is taking it for ${donation.secondLife.route === "animal-feed" ? "animal feed" : "compost"}.`
+              : "♻️ It has been offered to nearby poultry, goshala and compost partners instead."}
+          </p>
+        )}
+        {!expiredBeforePickup && donation.status === "claimed" && unassigned && myClaim && !isAdmin && (
           <p className="mt-5 rounded-xl bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
             Waiting for a volunteer. You can also collect it yourself with the donor's code.
           </p>
         )}
-        {donation.status === "claimed" && !unassigned && !mine && (
+        {!expiredBeforePickup && donation.status === "claimed" && !unassigned && !mine && (
           <p className="mt-5 rounded-xl bg-blue-50 px-4 py-3 text-sm text-blue-800">
             🚴 {donation.volunteerName} is heading to the donor.
           </p>
@@ -285,7 +302,11 @@ function MyRescues() {
   const relevant = donations.filter((d) => {
     if (d.status === "available" || d.status === "under_review") return false
     if (isAdmin) return true
-    if (isVolunteer) return (d.status === "claimed" && !d.volunteerId) || d.volunteerId === uid
+    if (isVolunteer) {
+      // Open tasks only while still safe to eat; your own tasks always show
+      const expired = typeof d.expiresAt === "number" && now > d.expiresAt
+      return (d.status === "claimed" && !d.volunteerId && !expired && !d.secondLife) || d.volunteerId === uid
+    }
     return d.rescuedBy === uid
   })
 

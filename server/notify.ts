@@ -3,9 +3,9 @@
 // server re-reads the donation, checks the event really matches its current
 // state, picks the recipients and writes the message itself. So nobody can
 // use this endpoint to send arbitrary text or spam old events.
-import { verifyFirebaseUser } from "./auth.ts"
+import { allowRequest, verifyFirebaseUser } from "./auth.ts"
 import { getDocument, queryEquals } from "./firestoreRest.ts"
-import { normalizeIndianPhone, sendWhatsApp, whatsappConfigured, type SendResult } from "./whatsapp.ts"
+import { maskPhone, normalizeIndianPhone, sendWhatsApp, whatsappConfigured, type SendResult } from "./whatsapp.ts"
 
 type Env = Record<string, string | undefined>
 
@@ -148,13 +148,30 @@ export async function handleNotifyRequest(request: Request, env: Env): Promise<R
 
   const header = request.headers.get("authorization") ?? ""
   const idToken = header.startsWith("Bearer ") ? header.slice(7) : ""
+  let uid: string
   try {
-    await verifyFirebaseUser(request, env)
+    uid = await verifyFirebaseUser(request, env)
   } catch (error) {
     return json(401, { error: error instanceof Error ? error.message : "Please log in." })
   }
 
   const body = (await request.json().catch(() => ({}))) as { event?: string; donationId?: string }
+
+  // "Send test message" from the NGO's settings card: only ever goes to the
+  // caller's own saved number, and shows Twilio's answer so setup is easy.
+  if (body.event === "test") {
+    if (!allowRequest(uid)) return json(429, { error: "Too many tests. Wait a while." })
+    const me = await getDocument<NgoProfile>(env, idToken, `users/${uid}`)
+    const phone = me?.phone ? normalizeIndianPhone(me.phone) : null
+    if (!phone) return json(400, { error: "Save a valid WhatsApp number first." })
+    const result = await sendWhatsApp(
+      env,
+      phone,
+      `✅ SharePlate WhatsApp alerts are working for ${me?.orgName || me?.name || "you"}.\nYou'll get new food near you and live delivery updates here.`
+    )
+    return json(result.ok ? 200 : 502, result.ok ? { sent: 1, to: maskPhone(phone) } : { error: result.error, to: maskPhone(phone) })
+  }
+
   const event = body.event as NotifyEvent
   if (!EVENTS.includes(event) || typeof body.donationId !== "string" || !/^[A-Za-z0-9]{1,64}$/.test(body.donationId)) {
     return json(400, { error: "Invalid event or donationId." })
@@ -190,6 +207,10 @@ export async function handleNotifyRequest(request: Request, env: Env): Promise<R
     const ngo = reachable.find((n) => n.id === donation.rescuedBy)
     if (ngo) recipients = [{ phone: ngo.phone }]
   }
+
+  // Several NGO accounts can share one phone (e.g. demo accounts): message it once
+  const seen = new Set<string>()
+  recipients = recipients.filter((r) => !seen.has(r.phone) && Boolean(seen.add(r.phone)))
 
   if (recipients.length === 0) return json(200, { sent: 0, skipped: "no opted-in NGO to notify" })
 

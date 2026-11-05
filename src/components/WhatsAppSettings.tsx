@@ -2,7 +2,7 @@ import { doc, updateDoc } from "firebase/firestore"
 import { MessageCircle } from "lucide-react"
 import { useState } from "react"
 
-import { db } from "../firebase"
+import { auth, db } from "../firebase"
 import type { UserProfile } from "../types"
 
 // Twilio WhatsApp Sandbox: each phone must send "join <code>" once
@@ -23,6 +23,32 @@ function WhatsAppSettings({ profile }: { profile: UserProfile }) {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState("")
   const [open, setOpen] = useState(!profile.whatsappOptIn)
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState<{ ok: boolean; text: string } | null>(null)
+
+  // Sends a WhatsApp message to the saved number and shows Twilio's answer
+  const sendTest = async () => {
+    try {
+      setTesting(true)
+      setTestResult(null)
+      const token = await auth.currentUser?.getIdToken()
+      const response = await fetch("/api/notify", {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+        body: JSON.stringify({ event: "test" }),
+      })
+      const data = (await response.json().catch(() => ({}))) as { error?: string; to?: string }
+      setTestResult(
+        response.ok
+          ? { ok: true, text: `✅ Sent to ${data.to}. Check WhatsApp on that phone.` }
+          : { ok: false, text: `❌ ${data.error ?? `Failed (${response.status})`}${data.to ? ` [${data.to}]` : ""}` }
+      )
+    } catch {
+      setTestResult({ ok: false, text: "❌ Couldn't reach the server." })
+    } finally {
+      setTesting(false)
+    }
+  }
 
   const locate = () => {
     if (!navigator.geolocation) {
@@ -132,13 +158,29 @@ function WhatsAppSettings({ profile }: { profile: UserProfile }) {
 
       {message && <p className="mt-3 text-sm font-medium text-gray-700">{message}</p>}
 
-      <button
-        type="submit"
-        disabled={saving}
-        className="mt-4 rounded-full bg-black px-6 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:bg-gray-400"
-      >
-        {saving ? "Saving..." : "Save"}
-      </button>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <button
+          type="submit"
+          disabled={saving}
+          className="rounded-full bg-black px-6 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:bg-gray-400"
+        >
+          {saving ? "Saving..." : "Save"}
+        </button>
+        <button
+          type="button"
+          disabled={testing}
+          onClick={sendTest}
+          className="rounded-full border px-6 py-3 text-sm font-semibold transition hover:bg-gray-50 disabled:opacity-50"
+        >
+          {testing ? "Sending..." : "Send test message"}
+        </button>
+      </div>
+
+      {testResult && (
+        <p className={`mt-3 rounded-xl px-4 py-3 text-sm ${testResult.ok ? "bg-green-50 text-green-800" : "bg-red-50 text-red-700"}`}>
+          {testResult.text}
+        </p>
+      )}
     </form>
   )
 }

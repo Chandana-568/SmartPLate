@@ -46,7 +46,30 @@ export async function sendWhatsApp(env: Env, to: string, body: string): Promise<
 
   if (response.ok) return { to, ok: true }
   const data = (await response.json().catch(() => ({}))) as { message?: string; code?: number }
-  // 63015/63016: recipient hasn't joined the sandbox or the 24 h window closed
-  console.error(`Twilio error ${response.status} (${data.code}): ${data.message}`)
-  return { to, ok: false, error: data.message ?? `Twilio error ${response.status}` }
+  console.error(`Twilio error ${response.status} (${data.code}) to ${maskPhone(to)}: ${data.message}`)
+  return { to, ok: false, error: explainTwilioError(data.code, data.message) }
+}
+
+// "+919876543210" → "+91•••••3210" for logs
+export function maskPhone(phone: string) {
+  return phone.length > 7 ? `${phone.slice(0, 3)}•••••${phone.slice(-4)}` : "•••"
+}
+
+// Turns Twilio's error codes into the fix a person can do
+export function explainTwilioError(code?: number, message?: string) {
+  switch (code) {
+    case 572002:
+    case 21608:
+      return "Twilio trial accounts can only message verified numbers. Add this number in Twilio → Phone Numbers → Verified Caller IDs."
+    case 21654:
+    case 63015:
+    case 63016:
+      return "This phone hasn't joined the WhatsApp sandbox (or joined over 24 h ago). Send the 'join <code>' message to +1 415 523 8886 from this phone, then try again."
+    case 20003:
+      return "Twilio rejected the Account SID / Auth Token."
+    case 21211:
+      return "That phone number isn't valid."
+    default:
+      return message ?? "Twilio couldn't send the message."
+  }
 }

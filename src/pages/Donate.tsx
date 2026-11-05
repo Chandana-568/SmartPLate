@@ -42,6 +42,8 @@ function Donate() {
   const [quantity, setQuantity] = useState("")
   const [location, setLocation] = useState("")
   const [pickupBefore, setPickupBefore] = useState("")
+  // true while the expiry is the AI's suggestion (so a weather re-check may update it)
+  const [expiryFromAi, setExpiryFromAi] = useState(false)
 
   const [photo, setPhoto] = useState<CompressedImage | null>(null)
   const [imageHash, setImageHash] = useState<string | null>(null)
@@ -59,7 +61,10 @@ function Donate() {
 
   // ---------------- AI photo analysis ----------------
 
-  const runAnalysis = async (image: CompressedImage) => {
+  const runAnalysis = async (
+    image: CompressedImage,
+    coords: { lat: number | null; lng: number | null } = { lat: latitude, lng: longitude }
+  ) => {
     setAiStatus("analyzing")
     setAiMessage("")
     try {
@@ -69,6 +74,8 @@ function Donate() {
         title,
         description,
         quantity: quantity ? Number(quantity) : undefined,
+        latitude: coords.lat,
+        longitude: coords.lng,
       })
       setAnalysis(result)
       setAiStatus("done")
@@ -80,9 +87,11 @@ function Donate() {
         setQuantity(String(result.estimatedServings))
       }
       setFoodType(result.foodType)
-      if (!pickupBefore) {
+      // Fill the expiry, or update it if the AI set it before (e.g. now with weather)
+      if (!pickupBefore || expiryFromAi) {
         const safeUntil = new Date(Date.now() + result.safeHours * 60 * 60 * 1000)
         setPickupBefore(toLocalInputValue(safeUntil))
+        setExpiryFromAi(true)
       }
     } catch (err) {
       setAnalysis(null)
@@ -136,9 +145,12 @@ function Donate() {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setLatitude(position.coords.latitude)
-        setLongitude(position.coords.longitude)
+        const { latitude: lat, longitude: lng } = position.coords
+        setLatitude(lat)
+        setLongitude(lng)
         setLocationLoading(false)
+        // Photo already analysed without weather: re-check with today's temperature
+        if (photo && analysis && !analysis.weather) runAnalysis(photo, { lat, lng })
       },
       () => {
         setLocationError("Unable to get your location. Please allow location access.")
@@ -410,7 +422,10 @@ function Donate() {
                 <button
                   key={hours}
                   type="button"
-                  onClick={() => setPickupBefore(toLocalInputValue(new Date(Date.now() + hours * HOUR_MS)))}
+                  onClick={() => {
+                    setPickupBefore(toLocalInputValue(new Date(Date.now() + hours * HOUR_MS)))
+                    setExpiryFromAi(false)
+                  }}
                   className="rounded-full border px-3 py-1.5 text-xs font-semibold transition hover:bg-gray-50"
                 >
                   +{hours} h
@@ -425,13 +440,21 @@ function Donate() {
               value={pickupBefore}
               min={toLocalInputValue(new Date(now + MIN_SAFE_MS))}
               max={toLocalInputValue(new Date(now + MAX_SAFE_MS))}
-              onChange={(event) => setPickupBefore(event.target.value)}
+              onChange={(event) => {
+                setPickupBefore(event.target.value)
+                setExpiryFromAi(false)
+              }}
               className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
             />
 
             {analysis && (
               <p className="mt-2 text-xs text-gray-500">
-                AI suggests this food stays safe for about {analysis.safeHours} hours.
+                {analysis.weather ? `🌡️ ${analysis.weather.tempC}°C now · ` : ""}
+                AI suggests this food stays safe for about {analysis.safeHours} hours
+                {analysis.safeHoursReason ? `: ${analysis.safeHoursReason}` : "."}
+                {!analysis.weather && latitude == null && (
+                  <> Tap <span className="font-semibold">📍 Use My Location</span> to adjust for today's temperature.</>
+                )}
               </p>
             )}
 

@@ -11,6 +11,9 @@ export async function analyzeFoodPhoto(input: {
   title?: string
   description?: string
   quantity?: number
+  // Pickup location: lets the server use today's temperature for expiry
+  latitude?: number | null
+  longitude?: number | null
 }): Promise<FoodAnalysis> {
   const token = await auth.currentUser?.getIdToken()
   if (!token) throw new AiUnavailableError("Log in to use AI auto-fill.")
@@ -29,6 +32,8 @@ export async function analyzeFoodPhoto(input: {
         title: input.title,
         description: input.description,
         quantity: input.quantity,
+        latitude: input.latitude ?? undefined,
+        longitude: input.longitude ?? undefined,
       }),
     })
   } catch {

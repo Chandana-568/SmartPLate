@@ -22,6 +22,10 @@ export interface FoodAnalysis {
   textIsSpam: boolean
   concerns: string[]
 
+  // Climate-aware expiry (missing on older analyses)
+  safeHoursReason?: string
+  weather?: { tempC: number; humidity: number; source: string } | null
+
   // Second life (missing on analyses made before Step 3)
   containsMeatFishEgg?: boolean
   animalFeedSafe?: boolean

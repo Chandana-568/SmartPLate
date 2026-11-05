@@ -1,4 +1,4 @@
-import { AlertTriangle, Clock, Recycle, ShieldCheck, Sparkles, Users } from "lucide-react"
+import { AlertTriangle, Clock, Recycle, ShieldCheck, Sparkles, Thermometer, Users } from "lucide-react"
 
 import type { FoodAnalysis } from "../types"
 
@@ -35,6 +35,21 @@ function AIInsightBox({ analysis }: { analysis: FoodAnalysis }) {
           {analysis.foodType}
         </div>
       </div>
+
+      {/* Climate-aware expiry */}
+      {(analysis.weather || analysis.safeHoursReason) && (
+        <p className="mt-3 flex items-start gap-2 rounded-xl bg-white/70 px-3 py-2 text-sm text-gray-700">
+          <Thermometer className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            {analysis.weather && (
+              <span className="font-semibold">
+                {analysis.weather.tempC}°C, {analysis.weather.humidity}% humidity now.{" "}
+              </span>
+            )}
+            {analysis.safeHoursReason}
+          </span>
+        </p>
+      )}
 
       {analysis.storageTip && (
         <p className="mt-3 text-sm text-gray-700">💡 {analysis.storageTip}</p>

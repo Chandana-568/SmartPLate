@@ -1,12 +1,14 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom"
 
 import { AuthProvider } from "./context/AuthContext"
+import { useDonationsSync } from "./hooks/useDonationsSync"
 
 import AdminRoute from "./components/AdminRoute"
 import Navbar from "./components/Navbar"
 import Footer from "./components/Footer"
 import ScrollToTop from "./components/ScrollToTop"
 import ProtectedRoute from "./components/ProtectedRoute"
+import RoleRedirect from "./components/RoleRedirect"
 
 import Home from "./pages/Home"
 import Food from "./pages/Food"
@@ -16,88 +18,64 @@ import Volunteers from "./pages/Volunteers"
 import Dashboard from "./pages/Dashboard"
 import Admin from "./pages/Admin"
 import MyRescues from "./pages/MyRescues"
+import MyDonations from "./pages/MyDonations"
+import Onboarding from "./pages/Onboarding"
 
 import Signup from "./pages/Signup"
 import Login from "./pages/Login"
-import MyDonations from "./pages/MyDonations"
+
 function App() {
+  // One live Firestore subscription for the whole app
+  useDonationsSync()
+
   return (
     <AuthProvider>
-
       <BrowserRouter>
-
         <ScrollToTop />
-
         <Navbar />
 
         <Routes>
-
           {/* Public Pages */}
+          <Route path="/" element={<Home />} />
+          <Route path="/food" element={<Food />} />
+          <Route path="/food/:id" element={<FoodDetails />} />
+          <Route path="/volunteers" element={<Volunteers />} />
 
-          <Route
-            path="/"
-            element={<Home />}
-          />
+          {/* Authentication */}
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/start" element={<RoleRedirect />} />
 
-          <Route
-            path="/food"
-            element={<Food />}
-          />
-
-          <Route
-            path="/food/:id"
-            element={<FoodDetails />}
-          />
-
-          <Route
-            path="/volunteers"
-            element={<Volunteers />}
-          />
-
-          {/* Authentication Pages */}
-
-          <Route
-            path="/signup"
-            element={<Signup />}
-          />
-
-          <Route
-            path="/login"
-            element={<Login />}
-          />
-
-          {/* Protected: My Rescues */}
-
-          <Route
-            path="/my-rescues"
-            element={
-              <ProtectedRoute>
-                <MyRescues />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-  path="/my-donations"
-  element={
-    <ProtectedRoute>
-      <MyDonations />
-    </ProtectedRoute>
-  }
-/>
-
-          {/* Protected: Donate */}
-
+          {/* Donors */}
           <Route
             path="/donate"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute roles={["donor"]}>
                 <Donate />
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/my-donations"
+            element={
+              <ProtectedRoute roles={["donor"]}>
+                <MyDonations />
+              </ProtectedRoute>
+            }
+          />
 
-          {/* Protected: Dashboard */}
+          {/* NGOs + Volunteers */}
+          <Route
+            path="/my-rescues"
+            element={
+              <ProtectedRoute roles={["ngo", "volunteer"]}>
+                <MyRescues />
+              </ProtectedRoute>
+            }
+          />
 
+          {/* Any signed-in user */}
           <Route
             path="/dashboard"
             element={
@@ -108,7 +86,6 @@ function App() {
           />
 
           {/* Admin Only */}
-
           <Route
             path="/admin"
             element={
@@ -117,13 +94,10 @@ function App() {
               </AdminRoute>
             }
           />
-
         </Routes>
 
         <Footer />
-
       </BrowserRouter>
-
     </AuthProvider>
   )
 }

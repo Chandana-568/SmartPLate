@@ -5,24 +5,37 @@ import {
   Navigation,
   ArrowLeft,
 } from "lucide-react"
-import { Link, useParams } from "react-router-dom"
+import { useState } from "react"
+import { Link, useNavigate, useParams } from "react-router-dom"
 
+import { useAuth } from "../context/AuthContext"
+import { claimDonation } from "../services/donationService"
 import { useCharityStore } from "../store/useCharityStore"
 
 function FoodDetails() {
   const { id } = useParams()
+  const navigate = useNavigate()
+  const { user, profile, role } = useAuth()
 
   const donations = useCharityStore(
     (state) => state.donations
   )
+  const loading = useCharityStore((state) => state.loading)
 
-  const updateDonationStatus = useCharityStore(
-    (state) => state.updateDonationStatus
-  )
+  const [claiming, setClaiming] = useState(false)
+  const [claimError, setClaimError] = useState("")
 
   const donation = donations.find(
     (item) => item.id === id
   )
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-gray-50 px-6 py-20">
+        <p className="text-center text-gray-500">Loading...</p>
+      </main>
+    )
+  }
 
   // Donation not found
   if (!donation) {
@@ -56,22 +69,57 @@ function FoodDetails() {
 
   // Open location in Google Maps
   const openInMaps = () => {
-    const url =
-      `https://www.google.com/maps/search/?api=1&query=` +
-      `${donation.latitude},${donation.longitude}`
+    const query =
+      donation.latitude != null && donation.longitude != null
+        ? `${donation.latitude},${donation.longitude}`
+        : encodeURIComponent(donation.location)
 
-    window.open(url, "_blank")
+    const url =
+      `https://www.google.com/maps/search/?api=1&query=${query}`
+
+    window.open(url, "_blank", "noopener")
   }
 
-  // Claim donation
-  const handleClaim = () => {
-    if (donation.status === "available") {
-      updateDonationStatus(
-        donation.id,
-        "claimed"
+  const canClaim = role === "ngo" || role === "admin"
+
+  // Claim donation (NGOs only)
+  const handleClaim = async () => {
+    if (!user) {
+      navigate("/login")
+      return
+    }
+
+    if (!profile || donation.status !== "available") return
+
+    try {
+      setClaiming(true)
+      setClaimError("")
+      await claimDonation(donation.id, profile)
+      navigate("/my-rescues")
+    } catch (error) {
+      console.error("Claim failed:", error)
+      setClaimError(
+        error instanceof Error
+          ? error.message
+          : "Unable to claim this food. Please try again."
       )
+    } finally {
+      setClaiming(false)
     }
   }
+
+  const claimLabel =
+    donation.status !== "available"
+      ? donation.status === "claimed"
+        ? `Claimed by ${donation.rescuedByName ?? "an NGO"}`
+        : "Food Unavailable"
+      : !user
+        ? "Login as an NGO to Claim"
+        : !canClaim
+          ? "Only NGOs can claim food"
+          : claiming
+            ? "Claiming..."
+            : "Claim This Food"
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -280,19 +328,25 @@ function FoodDetails() {
               <button
                 type="button"
                 onClick={handleClaim}
-                disabled={donation.status !== "available"}
+                disabled={
+                  donation.status !== "available" ||
+                  claiming ||
+                  (Boolean(user) && !canClaim)
+                }
                 className="mt-3 w-full rounded-full
                 bg-black px-6 py-4 font-semibold text-white
                 transition hover:bg-gray-800
                 disabled:cursor-not-allowed
                 disabled:bg-gray-300"
               >
-                {donation.status === "available"
-                  ? "Claim This Food"
-                  : donation.status === "claimed"
-                    ? "Food Already Claimed"
-                    : "Food Unavailable"}
+                {claimLabel}
               </button>
+
+              {claimError && (
+                <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+                  {claimError}
+                </p>
+              )}
 
             </div>
 

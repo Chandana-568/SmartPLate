@@ -7,11 +7,20 @@ import {
 
 import type { User } from "firebase/auth"
 import { onAuthStateChanged } from "firebase/auth"
+import { doc, onSnapshot } from "firebase/firestore"
 
-import { auth } from "../firebase"
+import { auth, db } from "../firebase"
+import type { Role, UserProfile } from "../types"
+
+// Bootstrap admin: this account is treated as admin even before
+// its users/{uid} document has role "admin". Keep in sync with firestore.rules.
+export const ADMIN_EMAILS = ["chandana66266@gmail.com"]
 
 interface AuthContextType {
   user: User | null
+  profile: UserProfile | null
+  role: Role | null
+  isAdmin: boolean
   loading: boolean
 }
 
@@ -25,25 +34,66 @@ export function AuthProvider({
   children: React.ReactNode
 }) {
   const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [authLoading, setAuthLoading] = useState(true)
+  const [profileLoading, setProfileLoading] = useState(false)
 
+  // Firebase auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(
       auth,
       (currentUser) => {
         setUser(currentUser)
-        setLoading(false)
+        setProfileLoading(Boolean(currentUser))
+        setAuthLoading(false)
       }
     )
 
     return () => unsubscribe()
   }, [])
 
+  // Live profile document: users/{uid}
+  useEffect(() => {
+    if (!user) {
+      setProfile(null)
+      setProfileLoading(false)
+      return
+    }
+
+    const unsubscribe = onSnapshot(
+      doc(db, "users", user.uid),
+      (snapshot) => {
+        setProfile(
+          snapshot.exists()
+            ? ({ uid: snapshot.id, ...snapshot.data() } as UserProfile)
+            : null
+        )
+        setProfileLoading(false)
+      },
+      (error) => {
+        console.error("Profile load error:", error)
+        setProfile(null)
+        setProfileLoading(false)
+      }
+    )
+
+    return () => unsubscribe()
+  }, [user])
+
+  const isAdmin =
+    profile?.role === "admin" ||
+    (user?.email != null && ADMIN_EMAILS.includes(user.email))
+
+  const role: Role | null = isAdmin ? "admin" : profile?.role ?? null
+
   return (
     <AuthContext.Provider
       value={{
         user,
-        loading,
+        profile,
+        role,
+        isAdmin,
+        loading: authLoading || profileLoading,
       }}
     >
       {children}

@@ -1,80 +1,27 @@
 import { create } from "zustand"
-import { persist } from "zustand/middleware"
 
 import type { FoodDonation } from "../types"
-import { foodDonations } from "../data/mockData"
 
+// In-memory cache of the Firestore "donations" collection.
+// Filled by useDonationsSync (one live subscription for the whole app).
+// Firestore is the source of truth: write through donationService,
+// never by editing this store directly.
 interface CharityStore {
   donations: FoodDonation[]
-
-  addDonation: (donation: FoodDonation) => void
+  loading: boolean
+  error: string
 
   setDonations: (donations: FoodDonation[]) => void
-
-  updateDonationStatus: (
-    id: string,
-    status: FoodDonation["status"]
-  ) => void
+  setError: (error: string) => void
 }
 
-export const useCharityStore = create<CharityStore>()(
-  persist(
-    (set) => ({
-      donations: foodDonations,
+export const useCharityStore = create<CharityStore>()((set) => ({
+  donations: [],
+  loading: true,
+  error: "",
 
-      // Add a new donation only if the ID is unique
-      addDonation: (donation) =>
-        set((state) => {
-          const alreadyExists = state.donations.some(
-            (item) => item.id === donation.id
-          )
+  setDonations: (donations) =>
+    set({ donations, loading: false, error: "" }),
 
-          if (alreadyExists) {
-            return state
-          }
-
-          return {
-            donations: [
-              ...state.donations,
-              donation,
-            ],
-          }
-        }),
-
-      // Replace donations while removing duplicate IDs
-      setDonations: (donations) =>
-        set(() => {
-          const uniqueDonations = Array.from(
-            new Map(
-              donations.map((donation) => [
-                donation.id,
-                donation,
-              ])
-            ).values()
-          )
-
-          return {
-            donations: uniqueDonations,
-          }
-        }),
-
-      // Update donation status
-      updateDonationStatus: (id, status) =>
-        set((state) => ({
-          donations: state.donations.map(
-            (donation) =>
-              donation.id === id
-                ? {
-                    ...donation,
-                    status,
-                  }
-                : donation
-          ),
-        })),
-    }),
-
-    {
-      name: "shareplate-storage",
-    }
-  )
-)
+  setError: (error) => set({ error, loading: false }),
+}))

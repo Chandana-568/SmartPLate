@@ -1,54 +1,17 @@
-import { useEffect, useState } from "react"
-
-import { getDonationsFromFirestore } from "../services/donationService"
 import { useAuth } from "../context/AuthContext"
-
-import type { FoodDonation } from "../types"
+import { useCharityStore } from "../store/useCharityStore"
 
 function MyDonations() {
   const { user } = useAuth()
 
-  const [donations, setDonations] = useState<FoodDonation[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
+  // Live: status badges update the moment an NGO claims or a volunteer picks up
+  const allDonations = useCharityStore((state) => state.donations)
+  const loading = useCharityStore((state) => state.loading)
+  const error = useCharityStore((state) => state.error)
 
-  useEffect(() => {
-    const loadMyDonations = async () => {
-      if (!user) {
-        setDonations([])
-        setLoading(false)
-        return
-      }
-
-      try {
-        setLoading(true)
-        setError("")
-
-        const allDonations =
-          await getDonationsFromFirestore()
-
-        const myDonations = allDonations.filter(
-          (donation) =>
-            donation.donorId === user.uid
-        )
-
-        setDonations(myDonations)
-      } catch (error) {
-        console.error(
-          "Error loading my donations:",
-          error
-        )
-
-        setError(
-          "Unable to load your donations."
-        )
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadMyDonations()
-  }, [user])
+  const donations = allDonations.filter(
+    (donation) => donation.donorId === user?.uid
+  )
 
   // -----------------------------
   // Loading
@@ -215,6 +178,24 @@ function MyDonations() {
                         donation.pickupBefore
                       ).toLocaleString()}
                     </p>
+
+                    {donation.rescuedByName && (
+                      <p>
+                        <span className="font-semibold">
+                          Claimed by:
+                        </span>{" "}
+                        {donation.rescuedByName}
+                      </p>
+                    )}
+
+                    {donation.volunteerName && (
+                      <p>
+                        <span className="font-semibold">
+                          Volunteer:
+                        </span>{" "}
+                        {donation.volunteerName}
+                      </p>
+                    )}
 
                   </div>
 

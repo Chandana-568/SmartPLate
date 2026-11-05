@@ -9,10 +9,19 @@ import {
 import { useCharityStore } from "../store/useCharityStore"
 
 function Dashboard() {
-  const { user } = useAuth()
-  const donations = useCharityStore(
+  const { user, role } = useAuth()
+  const allDonations = useCharityStore(
     (state) => state.donations
   )
+
+  // Only the donations this user took part in (admins see everything)
+  const donations = allDonations.filter((donation) => {
+    if (role === "admin") return true
+    if (role === "donor") return donation.donorId === user?.uid
+    if (role === "ngo") return donation.rescuedBy === user?.uid
+    if (role === "volunteer") return donation.volunteerId === user?.uid
+    return false
+  })
 
   // -----------------------------
   // Statistics
@@ -76,8 +85,7 @@ function Dashboard() {
       (donation) =>
         donation.status !== "available"
     )
-    .slice(-5)
-    .reverse()
+    .slice(0, 5) // donations are already sorted newest first
 
   return (
     <main className="min-h-screen bg-gray-50">

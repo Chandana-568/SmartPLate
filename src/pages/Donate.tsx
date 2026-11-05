@@ -2,17 +2,12 @@ import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 
 import { addDonationToFirestore } from "../services/donationService"
-import { useCharityStore } from "../store/useCharityStore"
 import { useAuth } from "../context/AuthContext"
 
 function Donate() {
   const navigate = useNavigate()
 
-  const { user } = useAuth()
-
-  const addDonation = useCharityStore(
-    (state) => state.addDonation
-  )
+  const { user, profile } = useAuth()
 
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
@@ -90,22 +85,21 @@ function Donate() {
 
     try {
       const donation = {
-        id: `food-${Date.now()}`,
         title: title.trim(),
         description: description.trim(),
         foodType,
         quantity: mealQuantity,
         location: location.trim(),
-        latitude: latitude ?? 0,
-        longitude: longitude ?? 0,
+        latitude,
+        longitude,
         pickupBefore,
         image:
           image.trim() ||
           "https://images.unsplash.com/photo-1498837167922-ddd27525d352",
         urgency: "medium" as const,
-        status: "available" as const,
 
         donorName:
+          profile?.orgName ||
           user.displayName ||
           user.email ||
           "Community Donor",
@@ -113,15 +107,11 @@ function Donate() {
         donorId: user.uid,
 
         donorEmail: user.email || "",
-
-        rescuedBy: "",
       }
 
       await addDonationToFirestore(donation)
 
-      addDonation(donation)
-
-      navigate("/food")
+      navigate("/my-donations")
     } catch (error) {
       console.error(
         "Error adding donation:",

@@ -1,80 +1,103 @@
 import {
-  collection,
   addDoc,
-  getDocs,
+  collection,
+  doc,
+  onSnapshot,
+  runTransaction,
+  updateDoc,
 } from "firebase/firestore"
 
 import { db } from "../firebase"
 
-import type { FoodDonation } from "../types"
+import type { FoodDonation, UserProfile } from "../types"
 
-const donationsCollection = collection(
-  db,
-  "donations"
-)
+const donationsCollection = collection(db, "donations")
 
-// Add donation to Firestore
+export type NewDonation = Omit<
+  FoodDonation,
+  "id" | "status" | "rescuedBy" | "createdAt"
+>
+
+// Add donation to Firestore. Firestore generates the id.
 export const addDonationToFirestore = async (
-  donation: FoodDonation
+  donation: NewDonation
 ): Promise<string> => {
-  try {
-    console.log(
-      "Saving donation to Firestore:",
-      donation
-    )
+  const docRef = await addDoc(donationsCollection, {
+    ...donation,
+    status: "available",
+    rescuedBy: null,
+    volunteerId: null,
+    createdAt: Date.now(),
+  })
 
-    const docRef = await addDoc(
-      donationsCollection,
-      donation
-    )
-
-    console.log(
-      "Donation saved successfully:",
-      docRef.id
-    )
-
-    return docRef.id
-  } catch (error) {
-    console.error(
-      "Firestore donation error:",
-      error
-    )
-
-    throw error
-  }
+  return docRef.id
 }
 
-// Get all donations from Firestore
-export const getDonationsFromFirestore =
-  async (): Promise<FoodDonation[]> => {
-    try {
-      console.log(
-        "Loading donations from Firestore..."
-      )
+// Live subscription to all donations, newest first.
+// Returns the unsubscribe function.
+export const subscribeToDonations = (
+  onData: (donations: FoodDonation[]) => void,
+  onError: (error: Error) => void
+) =>
+  onSnapshot(
+    donationsCollection,
+    (snapshot) => {
+      const donations = snapshot.docs
+        // Spread data first so the real Firestore id always wins over
+        // any legacy "id" field stored inside old documents.
+        .map((d) => ({ ...d.data(), id: d.id }) as FoodDonation)
+        .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
 
-      const snapshot = await getDocs(
-        donationsCollection
-      )
+      onData(donations)
+    },
+    onError
+  )
 
-      const donations = snapshot.docs.map(
-        (doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })
-      ) as FoodDonation[]
+// NGO claims a donation. A transaction makes sure two NGOs
+// can't claim the same food at the same time.
+export const claimDonation = async (
+  donationId: string,
+  ngo: Pick<UserProfile, "uid" | "name" | "orgName">
+) => {
+  const ref = doc(db, "donations", donationId)
 
-      console.log(
-        "Donations loaded:",
-        donations
-      )
+  await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(ref)
 
-      return donations
-    } catch (error) {
-      console.error(
-        "Firestore get donations error:",
-        error
-      )
-
-      throw error
+    if (!snapshot.exists()) {
+      throw new Error("This donation no longer exists.")
     }
-  }
+
+    if (snapshot.data().status !== "available") {
+      throw new Error("Sorry, this food was just claimed by someone else.")
+    }
+
+    transaction.update(ref, {
+      status: "claimed",
+      rescuedBy: ngo.uid,
+      rescuedByName: ngo.orgName || ngo.name,
+      claimedAt: Date.now(),
+    })
+  })
+}
+
+// Volunteer (or the claiming NGO) picks the food up from the donor
+export const markPickedUp = async (
+  donationId: string,
+  picker: Pick<UserProfile, "uid" | "name">
+) => {
+  await updateDoc(doc(db, "donations", donationId), {
+    status: "picked-up",
+    volunteerId: picker.uid,
+    volunteerName: picker.name,
+    pickedUpAt: Date.now(),
+  })
+}
+
+// NGO confirms the food arrived
+export const markCompleted = async (donationId: string) => {
+  await updateDoc(doc(db, "donations", donationId), {
+    status: "completed",
+    completedAt: Date.now(),
+  })
+}

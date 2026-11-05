@@ -32,8 +32,8 @@ function Login() {
         password
       )
 
-      // Login successful
-      navigate("/")
+      // Login successful: /start sends each role to its home page
+      navigate("/start")
 
     } catch (error: any) {
       console.error("Login error:", error)

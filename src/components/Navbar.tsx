@@ -11,14 +11,39 @@ function Navbar() {
 
   const navigate = useNavigate()
 
-  const { user } = useAuth()
+  const { user, profile, role } = useAuth()
 
   const navLinks = [
     { name: "Home", path: "/" },
     { name: "Find Food", path: "/food" },
-    { name: "Donate Food", path: "/donate" },
-    { name: "Volunteer", path: "/volunteers" },
+    // Logged-out visitors see Donate (it leads to login); donors always do
+    ...(!user || role === "donor" || role === "admin"
+      ? [{ name: "Donate Food", path: "/donate" }]
+      : []),
+    ...(!user ? [{ name: "Volunteer", path: "/volunteers" }] : []),
   ]
+
+  // Role-specific page next to Dashboard
+  const roleLink =
+    role === "donor"
+      ? { name: "My Donations", path: "/my-donations" }
+      : role === "ngo"
+        ? { name: "My Rescues", path: "/my-rescues" }
+        : role === "volunteer"
+          ? { name: "My Pickups", path: "/my-rescues" }
+          : role === "admin"
+            ? { name: "Admin", path: "/admin" }
+            : null
+
+  const roleLabel =
+    role === "ngo"
+      ? "NGO"
+      : role
+        ? role.charAt(0).toUpperCase() + role.slice(1)
+        : null
+
+  const displayName =
+    profile?.orgName || profile?.name || user?.displayName
 
   const handleLogout = async () => {
     try {
@@ -71,10 +96,15 @@ function Navbar() {
 
           {user ? (
             <>
-              {/* User Name */}
-              {user.displayName && (
-                <span className="text-sm font-semibold">
-                  Hi, {user.displayName}
+              {/* User Name + role */}
+              {displayName && (
+                <span className="flex items-center gap-2 text-sm font-semibold">
+                  Hi, {displayName}
+                  {roleLabel && (
+                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                      {roleLabel}
+                    </span>
+                  )}
                 </span>
               )}
 
@@ -86,13 +116,15 @@ function Navbar() {
                 Dashboard
               </Link>
 
-              {/* My Rescues */}
-              <Link
-                to="/my-rescues"
-                className="text-sm font-medium"
-              >
-                My Rescues
-              </Link>
+              {/* Role page */}
+              {roleLink && (
+                <Link
+                  to={roleLink.path}
+                  className="text-sm font-medium"
+                >
+                  {roleLink.name}
+                </Link>
+              )}
 
               {/* Logout */}
               <button
@@ -161,9 +193,10 @@ function Navbar() {
             {user ? (
               <>
                 {/* Mobile User Name */}
-                {user.displayName && (
+                {displayName && (
                   <span className="font-semibold">
-                    Hi, {user.displayName}
+                    Hi, {displayName}
+                    {roleLabel && ` · ${roleLabel}`}
                   </span>
                 )}
 
@@ -176,14 +209,16 @@ function Navbar() {
                   Dashboard
                 </Link>
 
-                {/* My Rescues */}
-                <Link
-                  to="/my-rescues"
-                  onClick={() => setIsOpen(false)}
-                  className="font-medium"
-                >
-                  My Rescues
-                </Link>
+                {/* Role page */}
+                {roleLink && (
+                  <Link
+                    to={roleLink.path}
+                    onClick={() => setIsOpen(false)}
+                    className="font-medium"
+                  >
+                    {roleLink.name}
+                  </Link>
+                )}
 
                 {/* Logout */}
                 <button

@@ -1,17 +1,23 @@
 import { Navigate } from "react-router-dom"
 
 import { useAuth } from "../context/AuthContext"
+import { homeForRole } from "../services/userService"
+import type { Role } from "../types"
 
 interface ProtectedRouteProps {
   children: React.ReactNode
+  // Roles allowed on this page. Omit to allow any signed-in user.
+  // Admins are always allowed.
+  roles?: Role[]
 }
 
 function ProtectedRoute({
   children,
+  roles,
 }: ProtectedRouteProps) {
-  const { user, loading } = useAuth()
+  const { user, profile, role, isAdmin, loading } = useAuth()
 
-  // Wait for Firebase to check authentication
+  // Wait for Firebase to check authentication + load the profile
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
@@ -27,7 +33,16 @@ function ProtectedRoute({
     return <Navigate to="/login" replace />
   }
 
-  // User is logged in
+  // Logged in but has not picked a role yet
+  if (!profile && !isAdmin) {
+    return <Navigate to="/onboarding" replace />
+  }
+
+  // Wrong role for this page: send them to their own home
+  if (roles && !isAdmin && (!role || !roles.includes(role))) {
+    return <Navigate to={homeForRole(role)} replace />
+  }
+
   return <>{children}</>
 }
 

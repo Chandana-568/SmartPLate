@@ -97,8 +97,12 @@ export function buildDemoDonations(admin: { uid: string; email: string }, now = 
     const place = PLACES[i % PLACES.length]
     const servings = [40, 25, 60, 120, 35, 18, 80, 30, 50, 45, 22, 70][i % 12]
     const completed = status === "completed"
-    // Delivered ones are spread over the last 13 days; the rest are from today
-    const createdAt = completed ? now - (13 - i) * DAY - (i % 5) * HOUR : now - (i % 4) * 25 * MIN - 20 * MIN
+    // Delivered ones are spread over the last 13 days. Live ones are posted
+    // at different times so the freshness bars show a mix of green/amber/red.
+    const usedShare = [0.15, 0.6, 0.85, 0.35, 0.7, 0.9, 0.25][i % 7] // share of the safe window already gone
+    const createdAt = completed
+      ? now - (13 - i) * DAY - (i % 5) * HOUR
+      : now - Math.max(65 * MIN, usedShare * food.safeHours * HOUR)
     const ngo = NGOS[i % NGOS.length]
     const volunteer = VOLUNTEERS[i % VOLUNTEERS.length]
     const hasNgo = status !== "available"

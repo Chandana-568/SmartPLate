@@ -10,6 +10,7 @@ import { Link, useNavigate, useParams } from "react-router-dom"
 
 import { useAuth } from "../context/auth"
 import AIInsightBox from "../components/AIInsightBox"
+import FreshnessBar from "../components/FreshnessBar"
 import StatusTimeline from "../components/StatusTimeline"
 import { claimDonation } from "../services/donationService"
 import { useCharityStore } from "../store/useCharityStore"
@@ -289,22 +290,26 @@ function FoodDetails() {
 
                 </div>
 
-                {/* Pickup Time */}
-                <div className="flex items-center gap-4">
+                {/* Expiry + live freshness */}
+                <div className="flex items-start gap-4">
 
                   <div className="rounded-full bg-gray-100 p-3">
                     <Clock className="h-5 w-5" />
                   </div>
 
-                  <div>
+                  <div className="flex-1">
                     <p className="text-sm text-gray-500">
-                      Pickup Before
+                      Safe to eat until
                     </p>
 
                     <p className={`font-semibold ${expired ? "text-red-600" : ""}`}>
                       {formatTime(donation.pickupBefore)}
                       {expired && " (expired)"}
                     </p>
+
+                    <div className="mt-2">
+                      <FreshnessBar donation={donation} size="md" />
+                    </div>
                   </div>
 
                 </div>

@@ -2,6 +2,7 @@ import { KeyRound } from "lucide-react"
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 
+import FreshnessBar from "../components/FreshnessBar"
 import StatusTimeline from "../components/StatusTimeline"
 import { useAuth } from "../context/auth"
 import {
@@ -179,9 +180,13 @@ function MyDonations() {
                         {donation.foodType}
                       </p>
                       <p>
-                        <span className="font-semibold">Pickup before:</span>{" "}
+                        <span className="font-semibold">Safe until:</span>{" "}
                         {formatTime(donation.pickupBefore)}
                       </p>
+                    </div>
+
+                    <div className="mt-4">
+                      <FreshnessBar donation={donation} />
                     </div>
 
                     {donation.status === "under_review" && (

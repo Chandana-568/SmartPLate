@@ -2,6 +2,7 @@ import { ArrowRight, Clock, MapPin, Navigation, Phone, Users } from "lucide-reac
 import { useState } from "react"
 import { Link } from "react-router-dom"
 
+import FreshnessBar from "../components/FreshnessBar"
 import StatusTimeline from "../components/StatusTimeline"
 import WhatsAppSettings from "../components/WhatsAppSettings"
 import { useAuth } from "../context/auth"
@@ -94,13 +95,18 @@ function RescueCard({
             <MapPin className="h-4 w-4" /> Pickup: {donation.location} ({donation.donorName})
           </p>
           <p className="flex items-center gap-2">
-            <Clock className="h-4 w-4" /> Before {formatTime(donation.pickupBefore)}
+            <Clock className="h-4 w-4" /> Safe until {formatTime(donation.pickupBefore)}
           </p>
           {donation.rescuedByName && (
             <p className="flex items-center gap-2">
               <Phone className="h-4 w-4" /> Deliver to: <span className="font-semibold">{donation.rescuedByName}</span>
             </p>
           )}
+        </div>
+
+        {/* How much safe time is left: drivers prioritise red first */}
+        <div className="mt-4">
+          <FreshnessBar donation={donation} />
         </div>
 
         <div className="mt-5">

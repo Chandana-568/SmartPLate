@@ -3,6 +3,8 @@ import { useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
 import AIInsightBox from "../components/AIInsightBox"
+import FreshnessBar from "../components/FreshnessBar"
+import { useNow } from "../hooks/useNow"
 import { useAuth } from "../context/auth"
 import { AiUnavailableError, analyzeFoodPhoto } from "../services/aiService"
 import { addDonationToFirestore } from "../services/donationService"
@@ -22,11 +24,17 @@ function toLocalInputValue(date: Date) {
 
 type AiStatus = "idle" | "analyzing" | "done" | "unavailable" | "error"
 
+const HOUR_MS = 60 * 60 * 1000
+const MIN_SAFE_MS = 30 * 60 * 1000
+const MAX_SAFE_MS = 72 * HOUR_MS
+const QUICK_PICKS = [2, 4, 8, 24] // hours from now
+
 function Donate() {
   const navigate = useNavigate()
   const { user, profile } = useAuth()
   const allDonations = useCharityStore((state) => state.donations)
   const fileInput = useRef<HTMLInputElement>(null)
+  const now = useNow() // live clock for the expiry limits and preview
 
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
@@ -150,7 +158,22 @@ function Donate() {
     }
 
     if (!title.trim() || !description.trim() || !quantity || !location.trim() || !pickupBefore) {
-      setError("Please fill in all required fields.")
+      setError(
+        !pickupBefore
+          ? "Please set until when the food is safe to eat."
+          : "Please fill in all required fields."
+      )
+      return
+    }
+
+    // Expiry must leave time for a pickup, and be realistic for surplus food
+    const safeMs = new Date(pickupBefore).getTime() - Date.now()
+    if (!Number.isFinite(safeMs) || safeMs < MIN_SAFE_MS) {
+      setError("The 'safe until' time must be at least 30 minutes from now, so there's time to pick it up.")
+      return
+    }
+    if (safeMs > MAX_SAFE_MS) {
+      setError("Surplus food listings can be safe for at most 3 days. Please choose an earlier time.")
       return
     }
 
@@ -372,19 +395,50 @@ function Donate() {
             {locationError && <p className="mt-3 text-sm text-red-600">{locationError}</p>}
           </div>
 
-          {/* Pickup Time */}
+          {/* Expiry (mandatory) */}
           <div className="mt-6">
-            <label className="text-sm font-semibold">Pickup before *</label>
+            <label className="text-sm font-semibold" htmlFor="safe-until">
+              Food safe to eat until (expiry) *
+            </label>
+            <p className="mt-1 text-xs text-gray-500">
+              After this time the food is no longer offered to people.
+            </p>
+
+            <div className="mt-2 flex flex-wrap gap-2">
+              {QUICK_PICKS.map((hours) => (
+                <button
+                  key={hours}
+                  type="button"
+                  onClick={() => setPickupBefore(toLocalInputValue(new Date(Date.now() + hours * HOUR_MS)))}
+                  className="rounded-full border px-3 py-1.5 text-xs font-semibold transition hover:bg-gray-50"
+                >
+                  +{hours} h
+                </button>
+              ))}
+            </div>
+
             <input
+              id="safe-until"
               type="datetime-local"
+              required
               value={pickupBefore}
+              min={toLocalInputValue(new Date(now + MIN_SAFE_MS))}
+              max={toLocalInputValue(new Date(now + MAX_SAFE_MS))}
               onChange={(event) => setPickupBefore(event.target.value)}
               className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
             />
+
             {analysis && (
               <p className="mt-2 text-xs text-gray-500">
                 AI suggests this food stays safe for about {analysis.safeHours} hours.
               </p>
+            )}
+
+            {pickupBefore && (
+              <div className="mt-3 rounded-xl bg-gray-50 px-4 py-3">
+                <p className="mb-2 text-xs font-semibold text-gray-500">Preview: how NGOs will see freshness</p>
+                <FreshnessBar donation={{ pickupBefore, createdAt: now, status: "available" }} size="md" />
+              </div>
             )}
           </div>
 

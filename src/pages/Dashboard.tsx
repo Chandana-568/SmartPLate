@@ -20,6 +20,7 @@ function Dashboard() {
     if (role === "donor") return donation.donorId === user?.uid
     if (role === "ngo") return donation.rescuedBy === user?.uid
     if (role === "volunteer") return donation.volunteerId === user?.uid
+    if (role === "partner") return donation.secondLife?.partnerId === user?.uid
     return false
   })
 

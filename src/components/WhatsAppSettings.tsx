@@ -108,8 +108,9 @@ function WhatsAppSettings({ profile }: { profile: UserProfile }) {
         <MessageCircle className="h-5 w-5 text-green-600" /> WhatsApp alerts
       </p>
       <p className="mt-1 text-sm text-gray-600">
-        Get new food near you, plus every step of your deliveries (volunteer assigned, picked up,
-        delivered), straight on WhatsApp.
+        {profile.role === "partner"
+          ? "Get a WhatsApp alert the moment food near you expires and can go to your farm, shelter or compost unit instead of a landfill."
+          : "Get new food near you, plus every step of your deliveries (volunteer assigned, picked up, delivered), straight on WhatsApp."}
       </p>
 
       <ol className="mt-4 list-inside list-decimal space-y-1 rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-700">

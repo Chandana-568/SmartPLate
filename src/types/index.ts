@@ -23,7 +23,8 @@ export interface FoodAnalysis {
   concerns: string[]
 }
 
-export type Role = "donor" | "ngo" | "volunteer" | "admin"
+// "partner" = second-life partner: takes expired food for animals or compost
+export type Role = "donor" | "ngo" | "volunteer" | "partner" | "admin"
 
 // Roles a user may pick for themselves at sign-up.
 // "admin" is only granted from the Firebase console.
@@ -31,7 +32,24 @@ export const SELF_SERVICE_ROLES: Exclude<Role, "admin">[] = [
   "donor",
   "ngo",
   "volunteer",
+  "partner",
 ]
+
+// What a second-life partner does with expired food
+export type PartnerType = "poultry" | "goshala" | "compost" | "biogas"
+
+// Where expired food ends up
+export type SecondLifeRoute = "animal-feed" | "compost" | "biogas"
+
+export interface SecondLife {
+  status: "claimed" | "collected"
+  partnerId: string
+  partnerName: string
+  partnerType: PartnerType
+  route: SecondLifeRoute
+  claimedAt: number
+  collectedAt?: number
+}
 
 export interface UserProfile {
   uid: string
@@ -42,10 +60,13 @@ export interface UserProfile {
   phone: string
   createdAt: number
 
-  // NGO WhatsApp alerts (set from My Rescues)
+  // WhatsApp alerts for NGOs and partners (set on their dashboard)
   whatsappOptIn?: boolean
   latitude?: number | null
   longitude?: number | null
+
+  // Second-life partners only
+  partnerType?: PartnerType
 }
 
 export interface FoodDonation {
@@ -57,7 +78,10 @@ export interface FoodDonation {
   location: string
   latitude: number | null
   longitude: number | null
+  // Donor's "safe to eat until", as typed (local time, for display)
   pickupBefore: string
+  // Same moment in epoch ms, so security rules can enforce expiry
+  expiresAt?: number
   urgency: Urgency
   status: FoodStatus
   donorName: string
@@ -84,6 +108,9 @@ export interface FoodDonation {
   imageHash?: string | null
   reviewedBy?: string
   reviewedAt?: number
+
+  // After expiry: taken by a poultry farm, goshala, compost or biogas partner
+  secondLife?: SecondLife | null
 
   // true for sample data loaded from the Admin page ("Clear demo data" removes it)
   seed?: boolean

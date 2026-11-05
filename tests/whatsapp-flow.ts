@@ -55,7 +55,8 @@ async function main() {
   const batch = writeBatch(donor.db)
   batch.set(ref, {
     title: "40 servings veg biryani", description: "Fresh", foodType: "Vegetarian", quantity: 40,
-    location: "Vijayanagar, Mysuru", ...here, pickupBefore: "2026-11-05T19:30", image: "", urgency: "high",
+    location: "Vijayanagar, Mysuru", ...here, pickupBefore: "2026-11-05T19:30", expiresAt: Date.now() + 3 * 3600e3,
+    image: "", urgency: "high",
     donorName: "Spice Route Kitchen", donorId: donor.uid, donorEmail: "", aiAnalysis: null, riskScore: 0,
     riskReasons: [], imageHash: null, status: "available", rescuedBy: null, volunteerId: null, createdAt: Date.now(),
   })
@@ -93,6 +94,43 @@ async function main() {
     check(`'${event}' update → only the claiming NGO`, r.status === 200 && to.length === 1 && to[0] === "+919876543210", JSON.stringify(r.body))
     check(`'${event}' message text`, pattern.test(msg), msg)
   }
+
+  // ---- Expired food → suitable, nearby, opted-in partners ----
+  await signUp("goshala", { role: "partner", partnerType: "goshala", orgName: "Nandi Goshala", phone: "90000 00001", whatsappOptIn: true, latitude: 12.34, longitude: 76.62 })
+  await signUp("compost", { role: "partner", partnerType: "compost", orgName: "Green Compost", phone: "90000 00002", whatsappOptIn: true, latitude: 12.33, longitude: 76.63 })
+  await signUp("far-poultry", { role: "partner", partnerType: "poultry", orgName: "Far Farm", phone: "90000 00003", whatsappOptIn: true, latitude: 12.97, longitude: 77.59 })
+  await signUp("quiet-poultry", { role: "partner", partnerType: "poultry", orgName: "Quiet Farm", phone: "90000 00004", whatsappOptIn: false, latitude: 12.34, longitude: 76.62 })
+
+  const postExpiring = async (foodType: string) => {
+    const r = doc(collection(donor.db, "donations"))
+    const b = writeBatch(donor.db)
+    b.set(r, {
+      title: `20 servings ${foodType === "Vegetarian" ? "veg pulao" : "chicken pulao"}`, description: "x", foodType, quantity: 20,
+      location: "Vijayanagar, Mysuru", ...here, pickupBefore: "2026-11-06T12:00", expiresAt: Date.now() + 1500,
+      image: "", urgency: "high", donorName: "Spice Route Kitchen", donorId: donor.uid, donorEmail: "",
+      aiAnalysis: null, riskScore: 0, riskReasons: [], imageHash: null, status: "available",
+      rescuedBy: null, volunteerId: null, createdAt: Date.now(),
+    })
+    b.set(doc(donor.db, "donations", r.id, "private", "otp"), { code: "1111" })
+    await b.commit()
+    return r.id
+  }
+  const vegId = await postExpiring("Vegetarian")
+  const meatId = await postExpiring("Mixed")
+  check("'expired' before expiry → 409", (await notify(donor, "expired", vegId)).status === 409)
+  await new Promise((resolve) => setTimeout(resolve, 2500))
+
+  const vegAlert = await notify(donor, "expired", vegId)
+  const vegTo = (vegAlert.body.results?.map((r) => r.to) ?? []).sort()
+  check("Expired veg food → nearby goshala + compost (not far / opted-out)",
+    vegAlert.status === 200 && vegTo.join() === "+919000000001,+919000000002", JSON.stringify(vegAlert.body))
+  const goshalaMsg = vegAlert.body.results?.find((r) => r.to === "+919000000001")?.message ?? ""
+  check("…goshala message says animal feed, kg and distance", /Animal feed/.test(goshalaMsg) && /8 kg/.test(goshalaMsg) && /km away/.test(goshalaMsg), goshalaMsg)
+
+  const meatAlert = await notify(donor, "expired", meatId)
+  const meatTo = meatAlert.body.results?.map((r) => r.to) ?? []
+  check("Expired non-veg food → compost only, never the goshala",
+    meatAlert.status === 200 && meatTo.join() === "+919000000002", JSON.stringify(meatAlert.body))
 
   const failed = results.filter((r) => !r.ok)
   for (const r of results) console.log(`${r.ok ? "PASS" : "FAIL"}  ${r.name}${r.detail ? `  (${r.detail})` : ""}`)

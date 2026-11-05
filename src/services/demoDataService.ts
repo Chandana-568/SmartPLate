@@ -119,6 +119,7 @@ export function buildDemoDonations(admin: { uid: string; email: string }, now = 
       latitude: place.lat,
       longitude: place.lng,
       pickupBefore: localInput(createdAt + food.safeHours * HOUR),
+      expiresAt: createdAt + food.safeHours * HOUR,
       urgency: food.safeHours <= 4 ? "high" : "medium",
       status,
       donorName: DONORS[i % DONORS.length],
@@ -150,6 +151,7 @@ export function buildDemoDonations(admin: { uid: string; email: string }, now = 
     latitude: PLACES[0].lat,
     longitude: PLACES[0].lng,
     pickupBefore: localInput(now + 5 * HOUR),
+    expiresAt: now + 5 * HOUR,
     urgency: "medium",
     status: "under_review",
     donorName: "Unknown Seller",
@@ -175,6 +177,55 @@ export function buildDemoDonations(admin: { uid: string; email: string }, now = 
     ],
     imageHash: null,
     createdAt: now - 10 * MIN,
+  })
+
+  // Expired food for the second-life demo: never for people any more
+  const expired: { food: number; place: number; servings: number; expiredAgo: number; collected?: boolean }[] = [
+    { food: 2, place: 3, servings: 30, expiredAgo: 2 * HOUR }, // veg, recent → animal feed
+    { food: 3, place: 6, servings: 25, expiredAgo: 3 * HOUR }, // chicken pulao → compost only
+    { food: 6, place: 1, servings: 40, expiredAgo: 20 * HOUR, collected: true }, // already collected
+  ]
+  expired.forEach(({ food: f, place: p, servings, expiredAgo, collected }, k) => {
+    const food = FOODS[f]
+    const place = PLACES[p]
+    const expiresAt = now - expiredAgo
+    const createdAt = expiresAt - food.safeHours * HOUR
+    seeds.push({
+      seed: true,
+      title: `${servings} servings ${food.title.toLowerCase()}`,
+      description: food.description,
+      quantity: servings,
+      foodType: food.foodType,
+      location: place.name,
+      latitude: place.lat,
+      longitude: place.lng,
+      pickupBefore: localInput(expiresAt),
+      expiresAt,
+      urgency: "medium",
+      status: "available",
+      donorName: DONORS[(k + 2) % DONORS.length],
+      donorId: admin.uid,
+      donorEmail: admin.email,
+      image: IMG(IMAGES[(k + 5) % IMAGES.length]),
+      rescuedBy: null,
+      volunteerId: null,
+      aiAnalysis: analysisFor(food, servings),
+      riskScore: 0,
+      riskReasons: [],
+      imageHash: null,
+      createdAt,
+      secondLife: collected
+        ? {
+            status: "collected",
+            partnerId: "seed-partner-goshala",
+            partnerName: "Nandi Goshala",
+            partnerType: "goshala",
+            route: "animal-feed",
+            claimedAt: expiresAt + 30 * MIN,
+            collectedAt: expiresAt + 90 * MIN,
+          }
+        : null,
+    })
   })
 
   return seeds

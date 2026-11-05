@@ -12,7 +12,13 @@ import { db } from "../firebase"
 import { generatePickupCode } from "../utils/donationStatus"
 import { notifyNgos } from "./notifyService"
 
-import type { FoodDonation, UserProfile } from "../types"
+import type {
+  FoodDonation,
+  PartnerType,
+  SecondLife,
+  SecondLifeRoute,
+  UserProfile,
+} from "../types"
 
 const donationsCollection = collection(db, "donations")
 
@@ -159,6 +165,38 @@ export const markCompleted = async (donationId: string) => {
     completedAt: Date.now(),
   })
   notifyNgos("completed", donationId)
+}
+
+// Second-life partner (poultry, goshala, compost, biogas) claims expired food.
+// Transaction so two partners can't claim the same item.
+export const claimSecondLife = async (
+  donationId: string,
+  partner: Pick<UserProfile, "uid" | "name" | "orgName"> & { partnerType: PartnerType },
+  route: SecondLifeRoute
+) => {
+  const ref = doc(db, "donations", donationId)
+  await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(ref)
+    if (!snapshot.exists()) throw new Error("This listing no longer exists.")
+    if (snapshot.data().secondLife) throw new Error("Another partner already claimed this.")
+
+    const secondLife: SecondLife = {
+      status: "claimed",
+      partnerId: partner.uid,
+      partnerName: partner.orgName || partner.name,
+      partnerType: partner.partnerType,
+      route,
+      claimedAt: Date.now(),
+    }
+    transaction.update(ref, { secondLife })
+  })
+}
+
+export const markSecondLifeCollected = async (donation: FoodDonation) => {
+  if (!donation.secondLife) return
+  await updateDoc(doc(db, "donations", donation.id), {
+    secondLife: { ...donation.secondLife, status: "collected", collectedAt: Date.now() },
+  })
 }
 
 // Admin approves a flagged listing so NGOs can see it

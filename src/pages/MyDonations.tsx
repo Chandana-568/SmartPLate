@@ -16,12 +16,17 @@ import {
   formatTime,
   isExpired,
 } from "../utils/donationStatus"
+import { KG_PER_SERVING, ROUTE_LABEL } from "../utils/secondLife"
 
 // Badge text + colour for a donation, from the donor's point of view
 function badgeFor(donation: FoodDonation) {
   if (donation.status === "under_review") {
     return { label: "Under review", style: "bg-orange-100 text-orange-700" }
   }
+  if (donation.secondLife?.status === "collected") {
+    return { label: "♻️ Second life", style: "bg-green-100 text-green-800" }
+  }
+  if (donation.secondLife) return { label: "♻️ Partner coming", style: "bg-teal-100 text-teal-800" }
   if (isExpired(donation)) return { label: "Expired", style: "bg-red-100 text-red-700" }
   switch (deliveryStage(donation)) {
     case "posted":
@@ -196,24 +201,40 @@ function MyDonations() {
                       </p>
                     )}
 
+                    {/* Second life: expired food goes to animals or compost, not a landfill */}
+                    {donation.secondLife ? (
+                      <p className="mt-5 rounded-xl bg-green-50 px-4 py-3 text-sm text-green-800">
+                        ♻️ {donation.secondLife.status === "collected" ? "Collected by" : "Claimed by"}{" "}
+                        <span className="font-semibold">{donation.secondLife.partnerName}</span> for{" "}
+                        {ROUTE_LABEL[donation.secondLife.route].toLowerCase()}.{" "}
+                        {donation.secondLife.status === "collected"
+                          ? `About ${Math.round(donation.quantity * KG_PER_SERVING)} kg kept out of landfill.`
+                          : "They're on their way."}
+                      </p>
+                    ) : (
+                      isExpired(donation) && (
+                        <p className="mt-5 rounded-xl bg-gray-100 px-4 py-3 text-sm text-gray-700">
+                          ♻️ Past its safe time for people. Nearby poultry farms, goshalas and compost units
+                          can now collect it, so it won't go to a landfill.
+                        </p>
+                      )
+                    )}
+
                     {showCode && <PickupCode donationId={donation.id} />}
 
                     <div className="mt-6">
                       <StatusTimeline donation={donation} />
                     </div>
 
-                    {(donation.status === "available" || donation.status === "under_review") && (
+                    {(donation.status === "available" || donation.status === "under_review") &&
+                      !donation.secondLife && !isExpired(donation) && (
                       <button
                         type="button"
                         disabled={cancellingId === donation.id}
                         onClick={() => handleCancel(donation)}
                         className="mt-6 w-full rounded-full border border-red-200 px-5 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50"
                       >
-                        {cancellingId === donation.id
-                          ? "Removing..."
-                          : isExpired(donation)
-                            ? "Remove Expired Listing"
-                            : "Cancel Donation"}
+                        {cancellingId === donation.id ? "Removing..." : "Cancel Donation"}
                       </button>
                     )}
                   </div>

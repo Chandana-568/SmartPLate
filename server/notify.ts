@@ -6,10 +6,17 @@
 import { allowRequest, verifyFirebaseUser } from "./auth.ts"
 import { getDocument, queryEquals } from "./firestoreRest.ts"
 import { maskPhone, normalizeIndianPhone, sendWhatsApp, whatsappConfigured, type SendResult } from "./whatsapp.ts"
+import {
+  KG_PER_SERVING,
+  PARTNER_TYPES,
+  ROUTE_LABEL,
+  suitability,
+  type PartnerTypeId,
+} from "../src/utils/secondLife.ts"
 
 type Env = Record<string, string | undefined>
 
-export const EVENTS = ["posted", "claimed", "assigned", "picked-up", "completed"] as const
+export const EVENTS = ["posted", "claimed", "assigned", "picked-up", "completed", "expired"] as const
 export type NotifyEvent = (typeof EVENTS)[number]
 
 interface Donation {
@@ -20,6 +27,9 @@ interface Donation {
   latitude: number | null
   longitude: number | null
   pickupBefore: string
+  expiresAt?: number
+  secondLife?: unknown
+  aiAnalysis?: { looksSpoiledOrUnsafe?: boolean } | null
   status: string
   donorName: string
   rescuedBy?: string | null
@@ -42,9 +52,12 @@ interface NgoProfile {
   whatsappOptIn?: boolean
   latitude?: number | null
   longitude?: number | null
+  partnerType?: PartnerTypeId
 }
 
 const FRESH_MS = 15 * 60 * 1000 // events older than this are ignored
+const EXPIRED_ALERT_WINDOW_MS = 2 * 60 * 60 * 1000 // alert partners within 2 h of expiry
+const PARTNER_RADIUS_KM = 25
 const NEARBY_KM = 15
 const MAX_NEARBY_NGOS = 5
 
@@ -84,7 +97,31 @@ function eventIsGenuine(event: NotifyEvent, d: Donation, now: number) {
       return d.status === "picked-up" && recent(d.pickedUpAt)
     case "completed":
       return d.status === "completed" && recent(d.completedAt)
+    case "expired":
+      // Really past its server-checked expiry, unclaimed, and only shortly after
+      return (
+        d.status === "available" &&
+        !d.secondLife &&
+        typeof d.expiresAt === "number" &&
+        now > d.expiresAt &&
+        now - d.expiresAt < EXPIRED_ALERT_WINDOW_MS
+      )
   }
+}
+
+// Message for second-life partners when food near them expires
+export function buildExpiredMessage(d: Donation, partnerType: PartnerTypeId, link: string, km?: number) {
+  const type = PARTNER_TYPES[partnerType]
+  return [
+    "♻️ *Expired food near you: keep it out of a landfill* (SharePlate)",
+    `about ${Math.round(d.quantity * KG_PER_SERVING)} kg · ${d.title}`,
+    `${type.emoji} Suitable for: ${ROUTE_LABEL[type.route]}`,
+    `📍 ${d.location}${km != null ? ` (${km.toFixed(1)} km away)` : ""}`,
+    `⏰ Was safe for people until ${formatPickup(d.pickupBefore)}`,
+    `From: ${d.donorName}`,
+    "",
+    `Collect it: ${link}`,
+  ].join("\n")
 }
 
 export function buildMessage(event: NotifyEvent, d: Donation, link: string, km?: number) {
@@ -130,6 +167,8 @@ export function buildMessage(event: NotifyEvent, d: Donation, link: string, km?:
         `That's about ${Math.round(d.quantity * 0.4)} kg of food saved from waste.`,
         `Details: ${link}`,
       ].join("\n")
+    case "expired":
+      return buildExpiredMessage(d, "compost", link, km)
   }
 }
 
@@ -185,6 +224,38 @@ export async function handleNotifyRequest(request: Request, env: Env): Promise<R
 
   const site = (env.PUBLIC_SITE_URL || new URL(request.url).origin).replace(/\/$/, "")
   const link = `${site}/food/${donation.id}`
+
+  // ---- Expired food → nearest suitable second-life partners ----
+  if (event === "expired") {
+    const partners = await queryEquals<NgoProfile>(env, idToken, "users", "role", "partner")
+    const { latitude: lat, longitude: lng } = donation
+    const suitable = partners
+      .map((p) => ({ ...p, phone: p.whatsappOptIn && p.phone ? normalizeIndianPhone(p.phone) : null }))
+      .filter((p): p is typeof p & { phone: string; partnerType: PartnerTypeId } =>
+        Boolean(p.phone && p.partnerType && suitability(donation, p.partnerType, now).ok))
+      .map((p) => ({
+        ...p,
+        km: lat != null && lng != null && p.latitude != null && p.longitude != null
+          ? distanceKm(lat, lng, p.latitude, p.longitude)
+          : undefined,
+      }))
+    const located = suitable.filter((p) => p.km != null && p.km <= PARTNER_RADIUS_KM).sort((a, b) => a.km! - b.km!)
+    const chosen = (located.length ? located : suitable.filter((p) => p.km == null)).slice(0, MAX_NEARBY_NGOS)
+
+    const seenPhones = new Set<string>()
+    const unique = chosen.filter((p) => !seenPhones.has(p.phone) && Boolean(seenPhones.add(p.phone)))
+    if (unique.length === 0) return json(200, { sent: 0, skipped: "no opted-in partner to notify" })
+
+    const partnerLink = `${site}/second-life`
+    const results = await Promise.all(
+      unique.map(async (p) => {
+        const message = buildExpiredMessage(donation, p.partnerType, partnerLink, p.km)
+        const result = await sendWhatsApp(env, p.phone, message)
+        return env.WHATSAPP_DRY_RUN === "true" ? { ...result, message } : result
+      })
+    )
+    return json(200, { sent: results.filter((r) => r.ok).length, results })
+  }
 
   // ---- Recipients ----
   const ngos = await queryEquals<NgoProfile>(env, idToken, "users", "role", "ngo")

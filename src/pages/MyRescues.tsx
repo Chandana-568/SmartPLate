@@ -260,7 +260,7 @@ function MyRescues() {
   const onComplete: Action = (d) => markCompleted(d.id)
 
   const relevant = donations.filter((d) => {
-    if (d.status === "available") return false
+    if (d.status === "available" || d.status === "under_review") return false
     if (isAdmin) return true
     if (isVolunteer) return (d.status === "claimed" && !d.volunteerId) || d.volunteerId === uid
     return d.rescuedBy === uid

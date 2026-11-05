@@ -1,10 +1,27 @@
 export type Urgency = "low" | "medium" | "high"
 
 export type FoodStatus =
+  | "under_review" // flagged by AI screening, hidden until an admin approves
   | "available"
   | "claimed"
   | "picked-up"
   | "completed"
+
+// What /api/analyze-food returns (mirrors server/analyzeFood.ts)
+export interface FoodAnalysis {
+  detectedFood: string
+  suggestedTitle: string
+  suggestedDescription: string
+  foodType: "Vegetarian" | "Mixed"
+  estimatedServings: number
+  safeHours: number
+  storageTip: string
+  isRealFoodPhoto: boolean
+  looksStockOrScreenshot: boolean
+  looksSpoiledOrUnsafe: boolean
+  textIsSpam: boolean
+  concerns: string[]
+}
 
 export type Role = "donor" | "ngo" | "volunteer" | "admin"
 
@@ -54,6 +71,13 @@ export interface FoodDonation {
   // Code the volunteer entered at pickup (checked by firestore.rules
   // against donations/{id}/private/otp, which only the donor can read)
   pickupOtp?: string
+
+  // AI screening (Phase 3)
+  aiAnalysis?: FoodAnalysis | null
+  riskScore?: number
+  riskReasons?: string[]
+  imageHash?: string | null
+  reviewedBy?: string
 
   createdAt?: number
   claimedAt?: number

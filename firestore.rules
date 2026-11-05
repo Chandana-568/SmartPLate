@@ -50,10 +50,13 @@ service cloud.firestore {
       // Anyone can browse food, even logged out
       allow read: if true;
 
-      // Donors post food in their own name, always starting as "available"
+      // Donors post food in their own name. AI-flagged posts (risk 70+)
+      // must start hidden as "under_review" until an admin approves them.
       allow create: if (hasRole('donor') || isAdmin())
         && request.resource.data.donorId == request.auth.uid
-        && request.resource.data.status == 'available';
+        && (request.resource.data.status == 'under_review'
+            || (request.resource.data.status == 'available'
+                && request.resource.data.get('riskScore', 0) < 70));
 
       function otpPath() {
         return /databases/$(database)/documents/donations/$(donationId)/private/otp;
@@ -78,7 +81,8 @@ service cloud.firestore {
             && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
                  'donorId', 'rescuedBy', 'rescuedByName', 'volunteerId',
                  'volunteerName', 'pickupOtp', 'claimedAt', 'assignedAt',
-                 'pickedUpAt', 'completedAt']))
+                 'pickedUpAt', 'completedAt', 'riskScore', 'riskReasons',
+                 'aiAnalysis', 'imageHash', 'reviewedBy']))
 
         // NGO claims available food for itself
         || (hasRole('ngo')
@@ -119,7 +123,7 @@ service cloud.firestore {
       allow delete: if isAdmin()
         || (signedIn()
             && resource.data.donorId == request.auth.uid
-            && resource.data.status == 'available');
+            && resource.data.status in ['available', 'under_review']);
 
       // ---------- donations/{id}/private/otp (pickup code) ----------
       match /private/{docId} {

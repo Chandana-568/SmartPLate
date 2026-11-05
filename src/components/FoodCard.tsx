@@ -2,6 +2,7 @@ import { Clock, MapPin, Users, Navigation } from "lucide-react"
 import { Link } from "react-router-dom"
 import type { FoodDonation } from "../types"
 import { formatTime } from "../utils/donationStatus"
+import { riskLevel } from "../utils/riskScore"
 
 interface FoodCardProps {
   donation: FoodDonation
@@ -32,6 +33,21 @@ function FoodCard({ donation, distance }: FoodCardProps) {
           alt={donation.title}
           className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
         />
+
+        {/* AI screening badge */}
+        {donation.aiAnalysis && (
+          <div className="absolute right-4 top-4">
+            {riskLevel(donation.riskScore) === "ok" ? (
+              <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-green-700 shadow">
+                ✓ AI-verified
+              </span>
+            ) : (
+              <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-yellow-700 shadow">
+                ⚠ Unverified
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Urgency Badge */}
         <div className="absolute left-4 top-4">

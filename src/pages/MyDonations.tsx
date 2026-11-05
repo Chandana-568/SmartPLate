@@ -18,6 +18,9 @@ import {
 
 // Badge text + colour for a donation, from the donor's point of view
 function badgeFor(donation: FoodDonation) {
+  if (donation.status === "under_review") {
+    return { label: "Under review", style: "bg-orange-100 text-orange-700" }
+  }
   if (isExpired(donation)) return { label: "Expired", style: "bg-red-100 text-red-700" }
   switch (deliveryStage(donation)) {
     case "posted":
@@ -181,13 +184,20 @@ function MyDonations() {
                       </p>
                     </div>
 
+                    {donation.status === "under_review" && (
+                      <p className="mt-5 rounded-xl bg-orange-50 px-4 py-3 text-sm text-orange-800">
+                        Our AI screening flagged this listing, so an admin will check it before NGOs can see it.
+                        {donation.riskReasons?.length ? ` Reason: ${donation.riskReasons[0]}.` : ""}
+                      </p>
+                    )}
+
                     {showCode && <PickupCode donationId={donation.id} />}
 
                     <div className="mt-6">
                       <StatusTimeline donation={donation} />
                     </div>
 
-                    {donation.status === "available" && (
+                    {(donation.status === "available" || donation.status === "under_review") && (
                       <button
                         type="button"
                         disabled={cancellingId === donation.id}

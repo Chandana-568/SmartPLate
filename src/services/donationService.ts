@@ -26,15 +26,17 @@ export type NewDonation = Omit<
 >
 
 // Add donation + its private pickup code in one atomic write.
+// High-risk donations start as "under_review" (hidden until an admin approves).
 export const addDonationToFirestore = async (
-  donation: NewDonation
+  donation: NewDonation,
+  status: "available" | "under_review" = "available"
 ): Promise<string> => {
   const ref = doc(donationsCollection)
   const batch = writeBatch(db)
 
   batch.set(ref, {
     ...donation,
-    status: "available",
+    status,
     rescuedBy: null,
     volunteerId: null,
     createdAt: Date.now(),
@@ -152,7 +154,15 @@ export const markCompleted = async (donationId: string) => {
   })
 }
 
-// Donor withdraws food that nobody has claimed yet
+// Admin approves a flagged listing so NGOs can see it
+export const approveDonation = async (donationId: string, adminUid: string) => {
+  await updateDoc(doc(db, "donations", donationId), {
+    status: "available",
+    reviewedBy: adminUid,
+  })
+}
+
+// Donor withdraws food that nobody has claimed yet (admins: reject a flagged listing)
 export const cancelDonation = async (donationId: string) => {
   const batch = writeBatch(db)
   batch.delete(otpRef(donationId))

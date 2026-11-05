@@ -9,6 +9,7 @@ import { useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 
 import { useAuth } from "../context/auth"
+import AIInsightBox from "../components/AIInsightBox"
 import StatusTimeline from "../components/StatusTimeline"
 import { claimDonation } from "../services/donationService"
 import { useCharityStore } from "../store/useCharityStore"
@@ -183,7 +184,9 @@ function FoodDetails() {
                         : "bg-gray-100 text-gray-700"
                 }`}
               >
-                {expired
+                {donation.status === "under_review"
+                  ? "Under Review"
+                  : expired
                   ? "Expired"
                   : donation.status === "available"
                     ? "Available"
@@ -362,6 +365,12 @@ function FoodDetails() {
                 <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
                   {claimError}
                 </p>
+              )}
+
+              {donation.aiAnalysis && (
+                <div className="mt-8">
+                  <AIInsightBox analysis={donation.aiAnalysis} />
+                </div>
               )}
 
               {/* Live delivery timeline */}

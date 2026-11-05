@@ -205,46 +205,29 @@ async function main() {
   await expectDenied("Donor can't create an already-completed donation", () =>
     postDonation(donor, { status: "completed" }))
 
-  // ---------- Expiry + second life ----------
-  const partner = await signUp("goshala", "partner")
-  const partner2 = await signUp("compost", "partner")
+  // ---------- Expiry: expired food never goes to people ----------
+  await expectDenied("Nobody can sign up as a 'partner' any more", async () => {
+    const someone = await signUp("someone", null)
+    await setDoc(doc(someone.db, "users", someone.uid), { name: "x", email: "", role: "partner", orgName: "", phone: "", createdAt: 0 })
+  })
   await expectDenied("Donor can't post without an expiry time", () => postDonation(donor, { expiresAt: null }))
   await expectDenied("Donor can't post food that's already expired", () => postDonation(donor, { expiresAt: Date.now() - 60_000 }))
 
   const freshId = await postDonation(donor)
   await expectDenied("Donor can't extend the expiry later", () =>
     updateDoc(doc(donor.db, "donations", freshId), { expiresAt: Date.now() + 48 * 3600e3 }))
-  const secondLife = (who: Actor, status: string) => ({
-    secondLife: { status, partnerId: who.uid, partnerName: who.name, partnerType: "goshala", route: "animal-feed", claimedAt: Date.now() },
-  })
-  await expectDenied("Partner can't take food that's still safe for people", () =>
-    updateDoc(doc(partner.db, "donations", freshId), secondLife(partner, "claimed")))
 
   // Post food that expires in 1.5 s, then wait for it to expire
   const expiringId = await postDonation(donor, { expiresAt: Date.now() + 1500 })
   await new Promise((resolve) => setTimeout(resolve, 2500))
   await expectDenied("NGO can't claim expired food", () => claim(ngo, expiringId))
-  await expectDenied("Volunteer can't take expired food as a partner", () =>
-    updateDoc(doc(volunteer.db, "donations", expiringId), secondLife(volunteer, "claimed")))
-  await expectAllowed("Partner claims expired food", () =>
-    updateDoc(doc(partner.db, "donations", expiringId), secondLife(partner, "claimed")))
-  await expectDenied("Second partner can't steal it", () =>
-    updateDoc(doc(partner2.db, "donations", expiringId), secondLife(partner2, "claimed")))
-  await expectDenied("Donor can't delete food a partner claimed", () =>
-    deleteDoc(doc(donor.db, "donations", expiringId)))
-  await expectDenied("Other partner can't mark it collected", () =>
-    updateDoc(doc(partner2.db, "donations", expiringId), secondLife(partner2, "collected")))
-  await expectAllowed("Partner marks it collected", () =>
-    updateDoc(doc(partner.db, "donations", expiringId), secondLife(partner, "collected")))
 
-  // ---------- Claimed by an NGO, but expired before pickup ----------
+  // Claimed by an NGO, but expired before pickup
   const lateId = await postDonation(donor, { expiresAt: Date.now() + 2500 }, "2468")
   await claim(ngo, lateId)
   await new Promise((resolve) => setTimeout(resolve, 3500))
   await expectDenied("Volunteer can't accept a task whose food expired", () => accept(volunteer, lateId))
   await expectDenied("NGO can't pick up expired food, even with the right code", () => pickUp(ngo, lateId, "2468"))
-  await expectAllowed("Partner can take food an NGO claimed but didn't collect in time", () =>
-    updateDoc(doc(partner.db, "donations", lateId), secondLife(partner, "claimed")))
 
   // ---------- Report ----------
   const failed = results.filter((r) => !r.ok)

@@ -19,7 +19,6 @@ function toLocalInput(ms: number) {
 export function isTicking(d: FoodDonation) {
   return (
     typeof d.expiresAt === "number" &&
-    !d.secondLife &&
     (d.status === "available" || d.status === "claimed" || d.status === "picked-up")
   )
 }

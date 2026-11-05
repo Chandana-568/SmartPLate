@@ -5,7 +5,6 @@ import { AuthProvider } from "./context/AuthContext"
 import { useDonationsSync } from "./hooks/useDonationsSync"
 
 import AdminRoute from "./components/AdminRoute"
-import ExpiryWatcher from "./components/ExpiryWatcher"
 import Navbar from "./components/Navbar"
 import Footer from "./components/Footer"
 import ScrollToTop from "./components/ScrollToTop"
@@ -22,7 +21,6 @@ const Volunteers = lazy(() => import("./pages/Volunteers"))
 const Dashboard = lazy(() => import("./pages/Dashboard"))
 const Admin = lazy(() => import("./pages/Admin"))
 const MyRescues = lazy(() => import("./pages/MyRescues"))
-const SecondLife = lazy(() => import("./pages/SecondLife"))
 const MyDonations = lazy(() => import("./pages/MyDonations"))
 const Onboarding = lazy(() => import("./pages/Onboarding"))
 const Signup = lazy(() => import("./pages/Signup"))
@@ -42,7 +40,6 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <ScrollToTop />
-        <ExpiryWatcher />
         <Navbar />
 
         <Suspense fallback={pageFallback}>
@@ -73,16 +70,6 @@ function App() {
             element={
               <ProtectedRoute roles={["donor"]}>
                 <MyDonations />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Second-life partners: poultry, goshala, compost, biogas */}
-          <Route
-            path="/second-life"
-            element={
-              <ProtectedRoute roles={["partner"]}>
-                <SecondLife />
               </ProtectedRoute>
             }
           />

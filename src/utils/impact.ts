@@ -1,5 +1,5 @@
 import type { FoodDonation } from "../types"
-import { expiryMs, RECYCLE_MAX_AGE_MS } from "./secondLife"
+import { simulateSecondLife } from "./secondLife"
 
 // Rough, commonly used estimates. Say them out loud in the pitch, and call
 // them estimates.
@@ -16,26 +16,20 @@ export function computeDestinations(donations: FoodDonation[], now = Date.now())
   let people = 0
   let animalFeed = 0
   let compost = 0
-  let awaitingPartner = 0
-  let landfill = 0
+  let awaitingPartner = 0 // expired, on its way to a second life (simulated)
+  // Every expired item is routed automatically, so nothing reaches landfill
+  const landfill = 0
 
   for (const d of donations) {
     if (d.status === "completed") {
       people += kg(d)
       continue
     }
-    if (d.secondLife?.status === "collected") {
-      if (d.secondLife.route === "animal-feed") animalFeed += kg(d)
-      else compost += kg(d) // compost + biogas
-      continue
-    }
-    // Expired and not (yet) collected by a partner
-    const expiry = expiryMs(d)
-    if (d.status === "available" && Number.isFinite(expiry) && now > expiry) {
-      // Older than the collection window with nobody taking it: honestly lost
-      if (now - expiry > RECYCLE_MAX_AGE_MS && !d.secondLife) landfill += kg(d)
-      else awaitingPartner += kg(d)
-    }
+    const sim = simulateSecondLife(d, now)
+    if (!sim) continue
+    if (sim.stage !== "received") awaitingPartner += kg(d)
+    else if (sim.route === "animal-feed") animalFeed += kg(d)
+    else compost += kg(d)
   }
 
   const diverted = animalFeed + compost

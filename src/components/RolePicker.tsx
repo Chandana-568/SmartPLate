@@ -1,7 +1,6 @@
-import { Bike, HandHeart, Recycle, Utensils } from "lucide-react"
+import { Bike, HandHeart, Utensils } from "lucide-react"
 
-import type { PartnerType, Role } from "../types"
-import { PARTNER_TYPES } from "../utils/secondLife"
+import type { Role } from "../types"
 
 type PickableRole = Exclude<Role, "admin">
 
@@ -29,44 +28,7 @@ const OPTIONS: {
     description: "Pick up and deliver food",
     icon: Bike,
   },
-  {
-    role: "partner",
-    title: "Second-life Partner",
-    description: "Poultry farm, goshala, compost or biogas: takes expired food",
-    icon: Recycle,
-  },
 ]
-
-// Partner type picker shown when "Second-life Partner" is chosen
-export function PartnerTypePicker({
-  value,
-  onChange,
-}: {
-  value: PartnerType
-  onChange: (type: PartnerType) => void
-}) {
-  return (
-    <div className="grid grid-cols-2 gap-2">
-      {(Object.keys(PARTNER_TYPES) as PartnerType[]).map((type) => {
-        const selected = value === type
-        return (
-          <button
-            key={type}
-            type="button"
-            aria-pressed={selected}
-            onClick={() => onChange(type)}
-            className={`rounded-xl border px-3 py-2 text-left text-sm transition ${
-              selected ? "border-black bg-black text-white" : "bg-white hover:border-gray-400"
-            }`}
-          >
-            <span className="mr-1">{PARTNER_TYPES[type].emoji}</span>
-            {PARTNER_TYPES[type].label}
-          </button>
-        )
-      })}
-    </div>
-  )
-}
 
 interface RolePickerProps {
   value: PickableRole

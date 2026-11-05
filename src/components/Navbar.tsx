@@ -31,8 +31,6 @@ function Navbar() {
         ? { name: "My Rescues", path: "/my-rescues" }
         : role === "volunteer"
           ? { name: "My Pickups", path: "/my-rescues" }
-          : role === "partner"
-            ? { name: "Second Life", path: "/second-life" }
           : role === "admin"
             ? { name: "Admin", path: "/admin" }
             : null
@@ -40,9 +38,7 @@ function Navbar() {
   const roleLabel =
     role === "ngo"
       ? "NGO"
-      : role === "partner"
-        ? "Partner"
-        : role
+      : role
         ? role.charAt(0).toUpperCase() + role.slice(1)
         : null
 

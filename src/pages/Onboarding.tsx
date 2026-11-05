@@ -1,13 +1,13 @@
 import { useState } from "react"
 import { Navigate, useNavigate } from "react-router-dom"
 
-import RolePicker, { PartnerTypePicker } from "../components/RolePicker"
+import RolePicker from "../components/RolePicker"
 import { useAuth } from "../context/auth"
 import {
   createUserProfile,
   homeForRole,
 } from "../services/userService"
-import type { PartnerType, Role } from "../types"
+import type { Role } from "../types"
 
 // Shown to signed-in accounts that have no users/{uid} profile yet
 // (e.g. accounts created before roles existed).
@@ -16,7 +16,6 @@ function Onboarding() {
   const { user, profile, role: currentRole, loading } = useAuth()
 
   const [role, setRole] = useState<Exclude<Role, "admin">>("donor")
-  const [partnerType, setPartnerType] = useState<PartnerType>("goshala")
   const [orgName, setOrgName] = useState("")
   const [phone, setPhone] = useState("")
   const [error, setError] = useState("")
@@ -29,7 +28,7 @@ function Onboarding() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
 
-    if ((role === "ngo" || role === "partner") && !orgName.trim()) {
+    if (role === "ngo" && !orgName.trim()) {
       setError("Please enter your NGO / organisation name.")
       return
     }
@@ -42,7 +41,6 @@ function Onboarding() {
         role,
         orgName,
         phone,
-        partnerType,
       })
       navigate(homeForRole(role))
     } catch (err) {
@@ -71,23 +69,12 @@ function Onboarding() {
         >
           <RolePicker value={role} onChange={setRole} />
 
-          {role === "partner" && (
-            <div className="mt-6">
-              <label className="text-sm font-semibold">What do you do with expired food?</label>
-              <div className="mt-2">
-                <PartnerTypePicker value={partnerType} onChange={setPartnerType} />
-              </div>
-            </div>
-          )}
-
           {role !== "volunteer" && (
             <div className="mt-6">
               <label className="text-sm font-semibold">
                 {role === "ngo"
                   ? "NGO / Organisation Name"
-                  : role === "partner"
-                    ? "Farm / Shelter / Unit Name"
-                    : "Restaurant / Organisation (optional)"}
+                  : "Restaurant / Organisation (optional)"}
               </label>
               <input
                 type="text"

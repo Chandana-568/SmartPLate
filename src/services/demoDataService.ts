@@ -187,12 +187,13 @@ export function buildDemoDonations(admin: { uid: string; email: string }, now = 
   })
 
   // Expired food for the second-life demo: never for people any more
-  const expired: { food: number; place: number; servings: number; expiredAgo: number; collected?: boolean }[] = [
-    { food: 2, place: 3, servings: 30, expiredAgo: 2 * HOUR }, // veg, recent → animal feed
-    { food: 3, place: 6, servings: 25, expiredAgo: 3 * HOUR }, // chicken pulao → compost only
-    { food: 6, place: 1, servings: 40, expiredAgo: 20 * HOUR, collected: true }, // already collected
+  // Each shows a different stage of the simulated second-life journey
+  const expired: { food: number; place: number; servings: number; expiredAgo: number }[] = [
+    { food: 2, place: 3, servings: 30, expiredAgo: 10 * MIN }, // veg → just routed to a poultry farm
+    { food: 3, place: 6, servings: 25, expiredAgo: 40 * MIN }, // chicken → being collected for compost
+    { food: 6, place: 1, servings: 40, expiredAgo: 5 * HOUR }, // veg → already received as animal feed
   ]
-  expired.forEach(({ food: f, place: p, servings, expiredAgo, collected }, k) => {
+  expired.forEach(({ food: f, place: p, servings, expiredAgo }, k) => {
     const food = FOODS[f]
     const place = PLACES[p]
     const expiresAt = now - expiredAgo
@@ -221,17 +222,6 @@ export function buildDemoDonations(admin: { uid: string; email: string }, now = 
       riskReasons: [],
       imageHash: null,
       createdAt,
-      secondLife: collected
-        ? {
-            status: "collected",
-            partnerId: "seed-partner-goshala",
-            partnerName: "Nandi Goshala",
-            partnerType: "goshala",
-            route: "animal-feed",
-            claimedAt: expiresAt + 30 * MIN,
-            collectedAt: expiresAt + 90 * MIN,
-          }
-        : null,
     })
   })
 

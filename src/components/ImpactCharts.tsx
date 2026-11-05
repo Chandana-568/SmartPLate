@@ -124,7 +124,7 @@ function ImpactCharts({ donations }: { donations: FoodDonation[] }) {
             { icon: "🍽️", label: "Eaten by people", kgValue: dest.people },
             { icon: "🐾", label: "Animal feed", kgValue: dest.animalFeed },
             { icon: "🌱", label: "Compost / biogas", kgValue: dest.compost },
-            { icon: "⏳", label: "Waiting for a partner", kgValue: dest.awaitingPartner },
+            { icon: "🚚", label: "On the way to a second life", kgValue: dest.awaitingPartner },
           ].map(({ icon, label, kgValue }) => (
             <div key={label} className="rounded-2xl bg-gray-50 p-4">
               <p className="text-sm text-gray-500">
@@ -146,7 +146,7 @@ function ImpactCharts({ donations }: { donations: FoodDonation[] }) {
               {formatNumber(dest.landfill)} kg
             </p>
             <p className={`text-xs ${dest.landfill === 0 ? "text-green-700" : "text-red-600"}`}>
-              {dest.landfill === 0 ? "✓ Zero waste to landfill" : "Expired over 7 days ago, never collected"}
+              {dest.landfill === 0 ? "✓ Zero waste to landfill" : "Sent to landfill"}
             </p>
           </div>
         </div>

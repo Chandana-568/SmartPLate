@@ -9,6 +9,7 @@
     "emulators": "firebase emulators:start --project demo-shareplate",
     "test:e2e": "firebase emulators:exec --project demo-shareplate \"node tests/e2e-flow.ts\"",
     "test:whatsapp": "firebase emulators:exec --project demo-shareplate \"node tests/whatsapp-flow.ts\"",
+    "test:second-life": "node tests/second-life.ts",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"

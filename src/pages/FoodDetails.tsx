@@ -13,7 +13,7 @@ import AIInsightBox from "../components/AIInsightBox"
 import FreshnessBar from "../components/FreshnessBar"
 import StatusTimeline from "../components/StatusTimeline"
 import TimeMachine from "../components/TimeMachine"
-import { awaitingSecondLife, ROUTE_LABEL, secondLifeAdvice } from "../utils/secondLife"
+import SecondLifeDemo from "../components/SecondLifeDemo"
 import { claimDonation } from "../services/donationService"
 import { useCharityStore } from "../store/useCharityStore"
 import {
@@ -368,29 +368,10 @@ function FoodDetails() {
                 {claimLabel}
               </button>
 
-              {/* Expired before pickup: route it to a second life */}
-              {awaitingSecondLife(donation) && (
-                <div className="mt-3 rounded-2xl bg-green-50 px-4 py-3 text-sm text-green-800">
-                  ♻️ No longer safe for people. {secondLifeAdvice(donation).reason}.
-                  {role === "partner" ? (
-                    <Link
-                      to="/second-life"
-                      className="mt-2 block rounded-full bg-green-700 px-5 py-2.5 text-center font-semibold text-white hover:bg-green-800"
-                    >
-                      Collect it on Second Life
-                    </Link>
-                  ) : (
-                    " Nearby poultry, goshala and compost partners can collect it."
-                  )}
-                </div>
-              )}
-              {donation.secondLife && (
-                <p className="mt-3 rounded-2xl bg-green-50 px-4 py-3 text-sm text-green-800">
-                  ♻️ {donation.secondLife.status === "collected" ? "Collected by" : "Claimed by"}{" "}
-                  <span className="font-semibold">{donation.secondLife.partnerName}</span> for{" "}
-                  {ROUTE_LABEL[donation.secondLife.route].toLowerCase()}.
-                </p>
-              )}
+              {/* Expired before pickup: automatically routed to animals or compost */}
+              <div className="mt-4">
+                <SecondLifeDemo donation={donation} />
+              </div>
 
               {claimError && (
                 <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600">

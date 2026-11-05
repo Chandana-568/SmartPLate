@@ -34,7 +34,7 @@ service cloud.firestore {
       // You can create only your own profile, and never as admin
       allow create: if signedIn()
         && request.auth.uid == uid
-        && request.resource.data.role in ['donor', 'ngo', 'volunteer', 'partner'];
+        && request.resource.data.role in ['donor', 'ngo', 'volunteer'];
 
       // You can edit your own profile but not change your role
       allow update: if (signedIn()
@@ -57,7 +57,6 @@ service cloud.firestore {
       allow create: if isAdmin() || (hasRole('donor')
         && request.resource.data.donorId == request.auth.uid
         && request.resource.data.get('expiresAt', 0) > request.time.toMillis()
-        && request.resource.data.get('secondLife', null) == null
         && (request.resource.data.status == 'under_review'
             || (request.resource.data.status == 'available'
                 && request.resource.data.get('riskScore', 0) < 70)));
@@ -77,14 +76,11 @@ service cloud.firestore {
       }
 
       // Expiry uses the server's clock. Old listings without expiresAt count
-      // as not expired for people and can't be sent to second life.
+      // as not expired. Expired food is never handed to people (the app shows
+      // it routed to animal feed or compost instead).
       function isExpired() {
         return resource.data.get('expiresAt', null) != null
           && request.time.toMillis() > resource.data.expiresAt;
-      }
-
-      function secondLife() {
-        return resource.data.get('secondLife', null);
       }
 
       allow update: if isAdmin()
@@ -98,7 +94,7 @@ service cloud.firestore {
                  'volunteerName', 'pickupOtp', 'claimedAt', 'assignedAt',
                  'pickedUpAt', 'completedAt', 'riskScore', 'riskReasons',
                  'aiAnalysis', 'imageHash', 'reviewedBy', 'reviewedAt',
-                 'expiresAt', 'pickupBefore', 'secondLife']))
+                 'expiresAt', 'pickupBefore']))
 
         // NGO claims available food for itself, only while it's safe to eat
         || (hasRole('ngo')
@@ -112,7 +108,6 @@ service cloud.firestore {
         || (hasRole('volunteer')
             && resource.data.status == 'claimed'
             && !isExpired()
-            && secondLife() == null
             && assignedVolunteer() == null
             && request.resource.data.volunteerId == request.auth.uid
             && changedOnly(['volunteerId', 'volunteerName', 'assignedAt']))
@@ -122,7 +117,6 @@ service cloud.firestore {
         || (signedIn()
             && resource.data.status == 'claimed'
             && !isExpired()
-            && secondLife() == null
             && request.resource.data.status == 'picked-up'
             && request.resource.data.volunteerId == request.auth.uid
             && (assignedVolunteer() == request.auth.uid
@@ -138,34 +132,13 @@ service cloud.firestore {
                 || resource.data.volunteerId == request.auth.uid)
             && resource.data.status == 'picked-up'
             && request.resource.data.status == 'completed'
-            && changedOnly(['status', 'completedAt']))
-
-        // Second-life partner claims expired food that never got picked up,
-        // whether it was unclaimed or claimed by an NGO too late
-        || (hasRole('partner')
-            && resource.data.status in ['available', 'claimed']
-            && isExpired()
-            && secondLife() == null
-            && request.resource.data.secondLife.partnerId == request.auth.uid
-            && request.resource.data.secondLife.status == 'claimed'
-            && request.resource.data.secondLife.route in ['animal-feed', 'compost', 'biogas']
-            && changedOnly(['secondLife']))
-
-        // ...and marks it collected
-        || (hasRole('partner')
-            && secondLife() != null
-            && secondLife().partnerId == request.auth.uid
-            && secondLife().status == 'claimed'
-            && request.resource.data.secondLife.partnerId == request.auth.uid
-            && request.resource.data.secondLife.status == 'collected'
-            && changedOnly(['secondLife']));
+            && changedOnly(['status', 'completedAt']));
 
       // Donors can cancel only food nobody has claimed yet
       allow delete: if isAdmin()
         || (signedIn()
             && resource.data.donorId == request.auth.uid
-            && resource.data.status in ['available', 'under_review']
-            && secondLife() == null);
+            && resource.data.status in ['available', 'under_review']);
 
       // ---------- donations/{id}/private/otp (pickup code) ----------
       match /private/{docId} {

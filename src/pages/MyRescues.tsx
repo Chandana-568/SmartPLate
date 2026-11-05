@@ -3,6 +3,7 @@ import { useState } from "react"
 import { Link } from "react-router-dom"
 
 import FreshnessBar from "../components/FreshnessBar"
+import SecondLifeDemo from "../components/SecondLifeDemo"
 import StatusTimeline from "../components/StatusTimeline"
 import { useNow } from "../hooks/useNow"
 import { priorityOf, TIER_LABEL, TIER_STYLE, type Priority } from "../utils/priority"
@@ -139,12 +140,12 @@ function RescueCard({
 
         {/* Status messages */}
         {expiredBeforePickup && (
-          <p className="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
-            ⚠️ Its safe time ran out before pickup, so it's no longer for people.{" "}
-            {donation.secondLife
-              ? `♻️ ${donation.secondLife.partnerName} is taking it for ${donation.secondLife.route === "animal-feed" ? "animal feed" : "compost"}.`
-              : "♻️ It has been offered to nearby poultry, goshala and compost partners instead."}
-          </p>
+          <div className="mt-5 space-y-2">
+            <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+              ⚠️ Its safe time ran out before pickup, so it's no longer for people.
+            </p>
+            <SecondLifeDemo donation={donation} compact />
+          </div>
         )}
         {!expiredBeforePickup && donation.status === "claimed" && unassigned && myClaim && !isAdmin && (
           <p className="mt-5 rounded-xl bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
@@ -305,7 +306,7 @@ function MyRescues() {
     if (isVolunteer) {
       // Open tasks only while still safe to eat; your own tasks always show
       const expired = typeof d.expiresAt === "number" && now > d.expiresAt
-      return (d.status === "claimed" && !d.volunteerId && !expired && !d.secondLife) || d.volunteerId === uid
+      return (d.status === "claimed" && !d.volunteerId && !expired) || d.volunteerId === uid
     }
     return d.rescuedBy === uid
   })

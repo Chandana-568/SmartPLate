@@ -7,19 +7,18 @@ import {
 } from "firebase/auth"
 
 import { auth } from "../firebase"
-import RolePicker, { PartnerTypePicker } from "../components/RolePicker"
+import RolePicker from "../components/RolePicker"
 import {
   createUserProfile,
   homeForRole,
 } from "../services/userService"
-import type { PartnerType, Role } from "../types"
+import type { Role } from "../types"
 import { authErrorMessage } from "../utils/authErrors"
 
 function Signup() {
   const navigate = useNavigate()
 
   const [role, setRole] = useState<Exclude<Role, "admin">>("donor")
-  const [partnerType, setPartnerType] = useState<PartnerType>("goshala")
   const [orgName, setOrgName] = useState("")
   const [phone, setPhone] = useState("")
   const [name, setName] = useState("")
@@ -48,7 +47,7 @@ function Signup() {
       return
     }
 
-    if ((role === "ngo" || role === "partner") && !orgName.trim()) {
+    if (role === "ngo" && !orgName.trim()) {
       setError("Please enter your NGO / organisation name.")
       return
     }
@@ -92,7 +91,6 @@ function Signup() {
         role,
         orgName,
         phone,
-        partnerType,
       })
 
       // Signup successful: user is already signed in
@@ -147,32 +145,20 @@ function Signup() {
             </div>
           </div>
 
-          {/* Partner type */}
-          {role === "partner" && (
-            <div className="mt-6">
-              <label className="text-sm font-semibold">What do you do with expired food?</label>
-              <div className="mt-2">
-                <PartnerTypePicker value={partnerType} onChange={setPartnerType} />
-              </div>
-            </div>
-          )}
-
-          {/* Organisation (donors, NGOs, partners) */}
+          {/* Organisation (donors + NGOs) */}
           {role !== "volunteer" && (
             <div className="mt-6">
               <label className="text-sm font-semibold">
                 {role === "ngo"
                   ? "NGO / Organisation Name"
-                  : role === "partner"
-                    ? "Farm / Shelter / Unit Name"
-                    : "Restaurant / Organisation (optional)"}
+                  : "Restaurant / Organisation (optional)"}
               </label>
               <input
                 type="text"
                 value={orgName}
                 onChange={(event) => setOrgName(event.target.value)}
                 placeholder={
-                  role === "ngo" ? "e.g. Hope Ashram" : role === "partner" ? "e.g. Nandi Goshala" : "e.g. Green Leaf Restaurant"
+                  role === "ngo" ? "e.g. Hope Ashram" : "e.g. Green Leaf Restaurant"
                 }
                 className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
               />

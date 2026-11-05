@@ -21,6 +21,12 @@ export interface FoodAnalysis {
   looksSpoiledOrUnsafe: boolean
   textIsSpam: boolean
   concerns: string[]
+
+  // Second life (missing on analyses made before Step 3)
+  containsMeatFishEgg?: boolean
+  animalFeedSafe?: boolean
+  secondLifeRoute?: "animal-feed" | "compost"
+  secondLifeReason?: string
 }
 
 // "partner" = second-life partner: takes expired food for animals or compost

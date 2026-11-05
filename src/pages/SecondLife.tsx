@@ -1,4 +1,4 @@
-import { CheckCircle2, MapPin, Navigation, Recycle, Scale } from "lucide-react"
+import { CheckCircle2, MapPin, Navigation, Recycle, Scale, Sparkles } from "lucide-react"
 import { useState } from "react"
 
 import WhatsAppSettings from "../components/WhatsAppSettings"
@@ -14,6 +14,7 @@ import {
   KG_PER_SERVING,
   PARTNER_TYPES,
   ROUTE_LABEL,
+  secondLifeAdvice,
   suitability,
 } from "../utils/secondLife"
 
@@ -96,6 +97,11 @@ function SecondLife() {
               {km != null && <span className="font-semibold text-gray-800">· {km.toFixed(1)} km</span>}
             </p>
           </div>
+          {/* Why this route: from the AI's photo check when available */}
+          <p className="mt-3 flex items-start gap-1.5 rounded-xl bg-gray-50 px-3 py-2 text-xs text-gray-600">
+            <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            {secondLifeAdvice(d).reason}
+          </p>
           {action}
           <a
             href={directions}

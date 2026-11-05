@@ -35,6 +35,18 @@ export const FoodAnalysisSchema = z.object({
   looksSpoiledOrUnsafe: z.boolean().describe("True if you see mould, rot, flies, garbage, half-eaten scraps or unsafe packaging"),
   textIsSpam: z.boolean().describe("True if the donor's text contains ads, links, phone numbers, abuse or gibberish; false if no text was given"),
   concerns: z.array(z.string()).describe("Short reasons for anything suspicious; empty if all looks fine"),
+
+  // ---- Second life: where this food should go if nobody eats it in time ----
+  containsMeatFishEgg: z.boolean().describe("True if you can see any meat, chicken, fish, egg or bones"),
+  animalFeedSafe: z.boolean().describe(
+    "True only if, once past its safe time for people, this food would still be reasonable feed for cattle or poultry: plain cooked grains, rice, chapati, bread, vegetables or fruit, with no meat, fish, egg or bones, no mould or rot, and not mostly sweets, chocolate, very salty, very oily or heavily spiced food"
+  ),
+  secondLifeRoute: z.enum(["animal-feed", "compost"]).describe(
+    "Best destination if this food expires: animal-feed when animalFeedSafe is true, otherwise compost"
+  ),
+  secondLifeReason: z.string().describe(
+    "One short reason for that choice, e.g. 'Plain veg rice and dal: fine for cattle feed' or 'Contains chicken: compost only'"
+  ),
 })
 
 export type FoodAnalysis = z.infer<typeof FoodAnalysisSchema>
@@ -52,6 +64,8 @@ type Env = Record<string, string | undefined>
 const PROMPT = (body: AnalyzeRequestBody) => `You screen food donations for SharePlate, a platform in India that sends surplus food from restaurants, hostels, wedding halls and homes to NGOs and shelters.
 
 Look at the photo and fill in every field. Be practical: estimate servings from visible containers and portions, and be conservative about how long food stays safe.
+
+SharePlate never lets surplus food reach a landfill. If nobody eats it in time, it goes to a goshala or poultry farm as animal feed, or to a compost or biogas unit. Judge that second life cautiously: when unsure whether something is safe for animals, choose compost.
 
 Donor's text so far (may be empty):
 title: ${JSON.stringify(body.title ?? "")}

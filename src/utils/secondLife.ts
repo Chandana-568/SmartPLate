@@ -30,7 +30,12 @@ interface ExpiredFood {
   foodType: string
   expiresAt?: number
   pickupBefore: string
-  aiAnalysis?: { looksSpoiledOrUnsafe?: boolean } | null
+  aiAnalysis?: {
+    looksSpoiledOrUnsafe?: boolean
+    containsMeatFishEgg?: boolean
+    animalFeedSafe?: boolean
+    secondLifeReason?: string
+  } | null
 }
 
 export function expiryMs(food: Pick<ExpiredFood, "expiresAt" | "pickupBefore">) {
@@ -50,11 +55,35 @@ export function suitability(
   const type = PARTNER_TYPES[partnerType]
   if (type.route !== "animal-feed") return { ok: true, route: type.route }
 
-  // Animal feed is stricter
-  if (food.foodType !== "Vegetarian") return { ok: false, reason: "Contains non-veg: compost only" }
-  if (food.aiAnalysis?.looksSpoiledOrUnsafe) return { ok: false, reason: "Looks spoiled: compost only" }
+  // Animal feed is stricter. The AI can only make it stricter, never looser.
+  const animal = animalFeedCheck(food)
+  if (!animal.ok) return animal
   if (sinceExpiry > ANIMAL_FEED_MAX_AGE_MS) return { ok: false, reason: "Expired over 24 h ago: compost only" }
   return { ok: true, route: "animal-feed" }
+}
+
+// Is this food OK for animals at all (ignoring how long ago it expired)?
+function animalFeedCheck(food: ExpiredFood): { ok: true } | { ok: false; reason: string } {
+  const ai = food.aiAnalysis
+  if (food.foodType !== "Vegetarian") return { ok: false, reason: "Contains non-veg: compost only" }
+  if (ai?.containsMeatFishEgg) return { ok: false, reason: "AI spotted meat, fish or egg: compost only" }
+  if (ai?.looksSpoiledOrUnsafe) return { ok: false, reason: "AI: looks spoiled: compost only" }
+  if (ai?.animalFeedSafe === false) {
+    return { ok: false, reason: `AI: ${ai.secondLifeReason || "not suitable for animals"}` }
+  }
+  return { ok: true }
+}
+
+// Advice shown to donors and partners before or after expiry
+export function secondLifeAdvice(food: ExpiredFood): { route: RouteId; reason: string; byAi: boolean } {
+  const check = animalFeedCheck(food)
+  const byAi = Boolean(food.aiAnalysis && "animalFeedSafe" in food.aiAnalysis)
+  if (!check.ok) return { route: "compost", reason: check.reason, byAi }
+  return {
+    route: "animal-feed",
+    reason: food.aiAnalysis?.secondLifeReason || "Vegetarian and not spoiled: fine for animal feed",
+    byAi,
+  }
 }
 
 // The best route for this food (animal feed when safe, otherwise compost)

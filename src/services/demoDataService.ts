@@ -78,6 +78,13 @@ function analysisFor(food: (typeof FOODS)[number], servings: number): FoodAnalys
     looksSpoiledOrUnsafe: false,
     textIsSpam: false,
     concerns: [],
+    containsMeatFishEgg: food.foodType !== "Vegetarian",
+    animalFeedSafe: food.foodType === "Vegetarian",
+    secondLifeRoute: food.foodType === "Vegetarian" ? "animal-feed" : "compost",
+    secondLifeReason:
+      food.foodType === "Vegetarian"
+        ? `Plain vegetarian ${food.title.toLowerCase()}: fine for cattle or poultry feed`
+        : "Contains chicken or egg: compost only",
   }
 }
 

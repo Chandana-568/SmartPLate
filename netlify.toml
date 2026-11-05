@@ -1,0 +1,18 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[functions]
+  directory = "netlify/functions"
+
+# AI endpoint → Netlify Function
+[[redirects]]
+  from = "/api/analyze-food"
+  to = "/.netlify/functions/analyze-food"
+  status = 200
+
+# Single-page app: let React Router handle every other path
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

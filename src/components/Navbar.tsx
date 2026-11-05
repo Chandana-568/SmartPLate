@@ -4,7 +4,7 @@ import { useState } from "react"
 import { signOut } from "firebase/auth"
 
 import { auth } from "../firebase"
-import { useAuth } from "../context/AuthContext"
+import { useAuth } from "../context/auth"
 
 function Navbar() {
   const [isOpen, setIsOpen] = useState(false)

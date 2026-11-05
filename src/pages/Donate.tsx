@@ -2,7 +2,7 @@ import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 
 import { addDonationToFirestore } from "../services/donationService"
-import { useAuth } from "../context/AuthContext"
+import { useAuth } from "../context/auth"
 
 function Donate() {
   const navigate = useNavigate()

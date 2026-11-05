@@ -1,4 +1,4 @@
-import { useAuth } from "../context/AuthContext"
+import { useAuth } from "../context/auth"
 import { useCharityStore } from "../store/useCharityStore"
 
 function MyDonations() {

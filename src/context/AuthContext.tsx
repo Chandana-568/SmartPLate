@@ -1,9 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-} from "react"
+import { useEffect, useState } from "react"
 
 import type { User } from "firebase/auth"
 import { onAuthStateChanged } from "firebase/auth"
@@ -11,22 +6,7 @@ import { doc, onSnapshot } from "firebase/firestore"
 
 import { auth, db } from "../firebase"
 import type { Role, UserProfile } from "../types"
-
-// Bootstrap admin: this account is treated as admin even before
-// its users/{uid} document has role "admin". Keep in sync with firestore.rules.
-export const ADMIN_EMAILS = ["chandana66266@gmail.com"]
-
-interface AuthContextType {
-  user: User | null
-  profile: UserProfile | null
-  role: Role | null
-  isAdmin: boolean
-  loading: boolean
-}
-
-const AuthContext = createContext<
-  AuthContextType | undefined
->(undefined)
+import { ADMIN_EMAILS, AuthContext } from "./auth"
 
 export function AuthProvider({
   children,
@@ -40,25 +20,20 @@ export function AuthProvider({
 
   // Firebase auth state
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      (currentUser) => {
-        setUser(currentUser)
-        setProfileLoading(Boolean(currentUser))
-        setAuthLoading(false)
-      }
-    )
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser)
+      // Signed out: clear the profile here, in the auth callback
+      if (!currentUser) setProfile(null)
+      setProfileLoading(Boolean(currentUser))
+      setAuthLoading(false)
+    })
 
     return () => unsubscribe()
   }, [])
 
   // Live profile document: users/{uid}
   useEffect(() => {
-    if (!user) {
-      setProfile(null)
-      setProfileLoading(false)
-      return
-    }
+    if (!user) return
 
     const unsubscribe = onSnapshot(
       doc(db, "users", user.uid),
@@ -99,16 +74,4 @@ export function AuthProvider({
       {children}
     </AuthContext.Provider>
   )
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext)
-
-  if (!context) {
-    throw new Error(
-      "useAuth must be used inside AuthProvider"
-    )
-  }
-
-  return context
 }

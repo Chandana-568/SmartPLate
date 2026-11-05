@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom"
 import { signInWithEmailAndPassword } from "firebase/auth"
 
 import { auth } from "../firebase"
+import { authErrorMessage } from "../utils/authErrors"
 
 function Login() {
   const navigate = useNavigate()
@@ -35,24 +36,11 @@ function Login() {
       // Login successful: /start sends each role to its home page
       navigate("/start")
 
-    } catch (error: any) {
+    } catch (error) {
       console.error("Login error:", error)
-
-      if (
-        error.code === "auth/invalid-credential" ||
-        error.code === "auth/wrong-password" ||
-        error.code === "auth/user-not-found"
-      ) {
-        setError("Invalid email or password.")
-      } else if (
-        error.code === "auth/invalid-email"
-      ) {
-        setError("Please enter a valid email address.")
-      } else {
-        setError(
-          "Unable to login. Please try again."
-        )
-      }
+      setError(
+        authErrorMessage(error, "Unable to login. Please try again.")
+      )
     } finally {
       setLoading(false)
     }

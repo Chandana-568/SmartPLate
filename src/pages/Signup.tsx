@@ -13,6 +13,7 @@ import {
   homeForRole,
 } from "../services/userService"
 import type { Role } from "../types"
+import { authErrorMessage } from "../utils/authErrors"
 
 function Signup() {
   const navigate = useNavigate()
@@ -95,35 +96,11 @@ function Signup() {
       // Signup successful: user is already signed in
       navigate(homeForRole(role))
 
-    } catch (error: any) {
+    } catch (error) {
       console.error(error)
-
-      if (
-        error.code ===
-        "auth/email-already-in-use"
-      ) {
-        setError(
-          "An account already exists with this email."
-        )
-      } else if (
-        error.code ===
-        "auth/invalid-email"
-      ) {
-        setError(
-          "Please enter a valid email address."
-        )
-      } else if (
-        error.code ===
-        "auth/weak-password"
-      ) {
-        setError(
-          "Password must be at least 6 characters."
-        )
-      } else {
-        setError(
-          "Unable to create account. Please try again."
-        )
-      }
+      setError(
+        authErrorMessage(error, "Unable to create account. Please try again.")
+      )
     } finally {
       setLoading(false)
     }

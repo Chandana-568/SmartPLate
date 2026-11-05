@@ -1,30 +1,73 @@
 import { Clock, MapPin, Users, ArrowRight } from "lucide-react"
 import { Link } from "react-router-dom"
 
+import { useState } from "react"
+
+import { useAuth } from "../context/auth"
+import {
+  markCompleted,
+  markPickedUp,
+} from "../services/donationService"
 import { useCharityStore } from "../store/useCharityStore"
+import type { FoodDonation } from "../types"
 
 function MyRescues() {
+  const { user, profile, role } = useAuth()
+
   const donations = useCharityStore(
     (state) => state.donations
   )
 
-  const updateDonationStatus = useCharityStore(
-    (state) => state.updateDonationStatus
-  )
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [actionError, setActionError] = useState("")
 
-  const claimedDonations = donations.filter(
-    (donation) =>
-      donation.status === "claimed" ||
-      donation.status === "picked-up" ||
-      donation.status === "completed"
-  )
+  const uid = user?.uid
+  const isVolunteer = role === "volunteer"
+
+  // NGO: food it claimed. Volunteer: claimed food waiting for a driver,
+  // plus deliveries this volunteer picked up. Admin: everything in progress.
+  const claimedDonations = donations.filter((donation) => {
+    if (donation.status === "available") return false
+    if (role === "admin") return true
+    if (isVolunteer) {
+      return (
+        (donation.status === "claimed" && !donation.volunteerId) ||
+        donation.volunteerId === uid
+      )
+    }
+    return donation.rescuedBy === uid
+  })
+
+  const canPickUp = (donation: FoodDonation) =>
+    donation.status === "claimed" &&
+    (isVolunteer || donation.rescuedBy === uid || role === "admin")
+
+  const canComplete = (donation: FoodDonation) =>
+    donation.status === "picked-up" &&
+    (donation.rescuedBy === uid ||
+      donation.volunteerId === uid ||
+      role === "admin")
+
+  const runAction = async (id: string, action: () => Promise<void>) => {
+    try {
+      setBusyId(id)
+      setActionError("")
+      await action()
+    } catch (error) {
+      console.error("Status update failed:", error)
+      setActionError("Couldn't update this rescue. Please try again.")
+    } finally {
+      setBusyId(null)
+    }
+  }
 
   const handlePickup = (id: string) => {
-    updateDonationStatus(id, "picked-up")
+    if (!profile) return
+    runAction(id, () => markPickedUp(id, profile))
   }
 
   const handleComplete = (id: string) => {
-    updateDonationStatus(id, "completed")
+    runAction(id, () => markCompleted(id))
   }
 
   return (
@@ -39,13 +82,20 @@ function MyRescues() {
           </p>
 
           <h1 className="mt-4 text-4xl font-bold md:text-5xl">
-            My Rescues
+            {isVolunteer ? "My Pickups" : "My Rescues"}
           </h1>
 
           <p className="mt-4 max-w-2xl text-lg text-gray-600">
-            Keep track of the food donations you've
-            rescued from the community.
+            {isVolunteer
+              ? "Pick up claimed food from donors and deliver it to NGOs."
+              : "Keep track of the food donations you've rescued from the community."}
           </p>
+
+          {actionError && (
+            <p className="mt-6 max-w-2xl rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+              {actionError}
+            </p>
+          )}
 
         </div>
       </section>
@@ -68,8 +118,9 @@ function MyRescues() {
             </h2>
 
             <p className="mx-auto mt-3 max-w-md text-gray-500">
-              You haven't claimed any food yet.
-              Find available food and make your first rescue.
+              {isVolunteer
+                ? "No pickups waiting right now. Claimed food will appear here live."
+                : "You haven't claimed any food yet. Find available food and make your first rescue."}
             </p>
 
             <Link
@@ -253,9 +304,19 @@ function MyRescues() {
 
 </div>
 
-                    {donation.status === "claimed" && (
+                    {donation.rescuedByName && (
+                      <p className="mt-4 text-xs text-gray-500">
+                        For <span className="font-semibold">{donation.rescuedByName}</span>
+                        {donation.volunteerName && (
+                          <> · Driver <span className="font-semibold">{donation.volunteerName}</span></>
+                        )}
+                      </p>
+                    )}
+
+                    {canPickUp(donation) && (
                       <button
                         type="button"
+                        disabled={busyId === donation.id}
                         onClick={() =>
                           handlePickup(donation.id)
                         }
@@ -267,9 +328,16 @@ function MyRescues() {
                       </button>
                     )}
 
-                    {donation.status === "picked-up" && (
+                    {donation.status === "picked-up" && !canComplete(donation) && (
+                      <div className="mt-6 rounded-full bg-blue-50 px-5 py-3 text-center text-sm font-semibold text-blue-700">
+                        On the way to the NGO
+                      </div>
+                    )}
+
+                    {canComplete(donation) && (
                       <button
                         type="button"
+                        disabled={busyId === donation.id}
                         onClick={() =>
                           handleComplete(donation.id)
                         }

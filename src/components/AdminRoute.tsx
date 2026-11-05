@@ -1,15 +1,14 @@
 import { Navigate } from "react-router-dom"
 
-import { useAuth } from "../context/AuthContext"
+import { useAuth } from "../context/auth"
 
 interface AdminRouteProps {
   children: React.ReactNode
 }
 
-const ADMIN_EMAIL = "chandana66266@gmail.com"
-
+// Admin = users/{uid}.role === "admin", or an email in ADMIN_EMAILS
 function AdminRoute({ children }: AdminRouteProps) {
-  const { user, loading } = useAuth()
+  const { user, isAdmin, loading } = useAuth()
 
   // Wait for Firebase authentication
   if (loading) {
@@ -28,11 +27,10 @@ function AdminRoute({ children }: AdminRouteProps) {
   }
 
   // Logged in but not admin
-  if (user.email !== ADMIN_EMAIL) {
+  if (!isAdmin) {
     return <Navigate to="/" replace />
   }
 
-  // Admin
   return <>{children}</>
 }
 

@@ -7,10 +7,19 @@ import {
 } from "firebase/auth"
 
 import { auth } from "../firebase"
+import RolePicker from "../components/RolePicker"
+import {
+  createUserProfile,
+  homeForRole,
+} from "../services/userService"
+import type { Role } from "../types"
 
 function Signup() {
   const navigate = useNavigate()
 
+  const [role, setRole] = useState<Exclude<Role, "admin">>("donor")
+  const [orgName, setOrgName] = useState("")
+  const [phone, setPhone] = useState("")
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -34,6 +43,11 @@ function Signup() {
       !confirmPassword
     ) {
       setError("Please fill in all fields.")
+      return
+    }
+
+    if (role === "ngo" && !orgName.trim()) {
+      setError("Please enter your NGO / organisation name.")
       return
     }
 
@@ -70,8 +84,16 @@ function Signup() {
         }
       )
 
-      // Signup successful
-      navigate("/login")
+      // Save role + organisation in Firestore (users/{uid})
+      await createUserProfile(userCredential.user, {
+        name,
+        role,
+        orgName,
+        phone,
+      })
+
+      // Signup successful: user is already signed in
+      navigate(homeForRole(role))
 
     } catch (error: any) {
       console.error(error)
@@ -136,8 +158,52 @@ function Signup() {
           className="mt-10 rounded-3xl border bg-white p-8"
         >
 
-          {/* Full Name */}
+          {/* Role */}
           <div>
+            <label className="text-sm font-semibold">
+              I am joining as
+            </label>
+            <div className="mt-2">
+              <RolePicker value={role} onChange={setRole} />
+            </div>
+          </div>
+
+          {/* Organisation (donors + NGOs) */}
+          {role !== "volunteer" && (
+            <div className="mt-6">
+              <label className="text-sm font-semibold">
+                {role === "ngo"
+                  ? "NGO / Organisation Name"
+                  : "Restaurant / Organisation (optional)"}
+              </label>
+              <input
+                type="text"
+                value={orgName}
+                onChange={(event) => setOrgName(event.target.value)}
+                placeholder={
+                  role === "ngo" ? "e.g. Hope Ashram" : "e.g. Green Leaf Restaurant"
+                }
+                className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
+              />
+            </div>
+          )}
+
+          {/* Phone */}
+          <div className="mt-6">
+            <label className="text-sm font-semibold">
+              Phone / WhatsApp (optional)
+            </label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(event) => setPhone(event.target.value)}
+              placeholder="+91 98765 43210"
+              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
+            />
+          </div>
+
+          {/* Full Name */}
+          <div className="mt-6">
 
             <label className="text-sm font-semibold">
               Full Name

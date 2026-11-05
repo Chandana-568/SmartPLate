@@ -1,0 +1,92 @@
+rules_version = '2';
+
+// Deploy: Firebase console → Firestore Database → Rules → paste → Publish
+//    or:  npx firebase-tools deploy --only firestore:rules
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userPath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    function hasRole(r) {
+      return signedIn() && exists(userPath()) && get(userPath()).data.role == r;
+    }
+
+    // Keep in sync with ADMIN_EMAILS in src/context/AuthContext.tsx
+    function isAdmin() {
+      return hasRole('admin')
+        || (signedIn() && request.auth.token.email == 'chandana66266@gmail.com');
+    }
+
+    function changedOnly(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+
+    // ---------- users/{uid} ----------
+    match /users/{uid} {
+      allow read: if signedIn();
+
+      // You can create only your own profile, and never as admin
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.role in ['donor', 'ngo', 'volunteer'];
+
+      // You can edit your own profile but not change your role
+      allow update: if (signedIn()
+          && request.auth.uid == uid
+          && request.resource.data.role == resource.data.role)
+        || isAdmin();
+
+      allow delete: if isAdmin();
+    }
+
+    // ---------- donations/{id} ----------
+    match /donations/{donationId} {
+      // Anyone can browse food, even logged out
+      allow read: if true;
+
+      // Donors post food in their own name, always starting as "available"
+      allow create: if (hasRole('donor') || isAdmin())
+        && request.resource.data.donorId == request.auth.uid
+        && request.resource.data.status == 'available';
+
+      allow update: if isAdmin()
+
+        // Donor edits details while the status stays the same
+        || (signedIn()
+            && resource.data.donorId == request.auth.uid
+            && request.resource.data.status == resource.data.status
+            && request.resource.data.donorId == resource.data.donorId)
+
+        // NGO claims available food for itself
+        || (hasRole('ngo')
+            && resource.data.status == 'available'
+            && request.resource.data.status == 'claimed'
+            && request.resource.data.rescuedBy == request.auth.uid
+            && changedOnly(['status', 'rescuedBy', 'rescuedByName', 'claimedAt']))
+
+        // Volunteer (or the claiming NGO) picks it up
+        || ((hasRole('volunteer') || resource.data.rescuedBy == request.auth.uid)
+            && resource.data.status == 'claimed'
+            && request.resource.data.status == 'picked-up'
+            && request.resource.data.volunteerId == request.auth.uid
+            && changedOnly(['status', 'volunteerId', 'volunteerName', 'pickedUpAt']))
+
+        // NGO or volunteer confirms delivery
+        || (signedIn()
+            && (resource.data.rescuedBy == request.auth.uid
+                || resource.data.volunteerId == request.auth.uid)
+            && resource.data.status == 'picked-up'
+            && request.resource.data.status == 'completed'
+            && changedOnly(['status', 'completedAt']));
+
+      allow delete: if isAdmin()
+        || (signedIn() && resource.data.donorId == request.auth.uid);
+    }
+  }
+}

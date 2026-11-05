@@ -1,20 +1,15 @@
 import { Search } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 import FoodCard from "../components/FoodCard"
-import { getDonationsFromFirestore } from "../services/donationService"
 import { useCharityStore } from "../store/useCharityStore"
 import { calculateDistance } from "../utils/distance"
-import type { FoodDonation } from "../types"
 
 function Food() {
-  const addDonation = useCharityStore(
-    (state) => state.addDonation
-  )
-
-  const [donations, setDonations] = useState<
-    FoodDonation[]
-  >([])
+  // Live data from the app-wide Firestore subscription
+  const donations = useCharityStore((state) => state.donations)
+  const loading = useCharityStore((state) => state.loading)
+  const firebaseError = useCharityStore((state) => state.error)
 
   const [search, setSearch] = useState("")
   const [foodType, setFoodType] = useState("all")
@@ -34,58 +29,6 @@ function Food() {
 
   const [distanceFilter, setDistanceFilter] =
     useState("all")
-
-  const [loading, setLoading] = useState(true)
-
-  const [firebaseError, setFirebaseError] =
-    useState("")
-
-  // --------------------------------
-  // Load donations from Firestore
-  // --------------------------------
-
-  useEffect(() => {
-    const loadDonations = async () => {
-      try {
-        setLoading(true)
-        setFirebaseError("")
-
-        console.log(
-          "Loading donations from Firebase..."
-        )
-
-        const firestoreDonations =
-          await getDonationsFromFirestore()
-
-        console.log(
-          "Firebase donations:",
-          firestoreDonations
-        )
-
-        setDonations(firestoreDonations)
-
-        // Keep Zustand synchronized
-        firestoreDonations.forEach((donation) => {
-          addDonation(donation)
-        })
-      } catch (error) {
-        console.error(
-          "Error loading donations from Firebase:",
-          error
-        )
-
-        setFirebaseError(
-          "Unable to load donations from Firebase."
-        )
-
-        setDonations([])
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadDonations()
-  }, [addDonation])
 
   // --------------------------------
   // Get user's location

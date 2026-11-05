@@ -12,6 +12,7 @@ import { useAuth } from "../context/auth"
 import AIInsightBox from "../components/AIInsightBox"
 import FreshnessBar from "../components/FreshnessBar"
 import StatusTimeline from "../components/StatusTimeline"
+import TimeMachine from "../components/TimeMachine"
 import { claimDonation } from "../services/donationService"
 import { useCharityStore } from "../store/useCharityStore"
 import {
@@ -375,6 +376,13 @@ function FoodDetails() {
               {donation.aiAnalysis && (
                 <div className="mt-8">
                   <AIInsightBox analysis={donation.aiAnalysis} />
+                </div>
+              )}
+
+              {/* Admin demo control: age this one listing */}
+              {role === "admin" && (
+                <div className="mt-8">
+                  <TimeMachine donations={[donation]} compact />
                 </div>
               )}
 

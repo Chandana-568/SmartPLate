@@ -8,6 +8,7 @@ import {
 import { useState } from "react"
 
 import ImpactCharts from "../components/ImpactCharts"
+import TimeMachine from "../components/TimeMachine"
 import { useAuth } from "../context/auth"
 import { clearDemoData, loadDemoData } from "../services/demoDataService"
 import {
@@ -222,6 +223,10 @@ function Admin() {
           </p>
 
           <DemoDataPanel donations={donations} />
+
+          <div className="mt-4">
+            <TimeMachine donations={donations} />
+          </div>
 
         </div>
       </section>

@@ -22,8 +22,12 @@ export const STAGE_LABEL: Record<FreshnessStage, string> = {
   expired: "Expired",
 }
 
-export function expiresAt(donation: Pick<FoodDonation, "pickupBefore">): number {
-  return new Date(donation.pickupBefore).getTime()
+// Prefer the exact epoch time (what the security rules check); fall back to
+// the typed local time for listings made before expiresAt existed.
+export function expiresAt(donation: Pick<FoodDonation, "pickupBefore" | "expiresAt">): number {
+  return typeof donation.expiresAt === "number"
+    ? donation.expiresAt
+    : new Date(donation.pickupBefore).getTime()
 }
 
 export function formatDuration(ms: number) {
@@ -37,7 +41,7 @@ export function formatDuration(ms: number) {
 }
 
 export function getFreshness(
-  donation: Pick<FoodDonation, "pickupBefore" | "createdAt">,
+  donation: Pick<FoodDonation, "pickupBefore" | "createdAt" | "expiresAt">,
   now = Date.now()
 ): Freshness | null {
   const end = expiresAt(donation)

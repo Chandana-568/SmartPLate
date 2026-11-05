@@ -4,6 +4,8 @@ import { Link } from "react-router-dom"
 
 import FreshnessBar from "../components/FreshnessBar"
 import StatusTimeline from "../components/StatusTimeline"
+import { useNow } from "../hooks/useNow"
+import { priorityOf, TIER_LABEL, TIER_STYLE, type Priority } from "../utils/priority"
 import WhatsAppSettings from "../components/WhatsAppSettings"
 import { useAuth } from "../context/auth"
 import {
@@ -24,6 +26,8 @@ function RescueCard({
   donation,
   uid,
   role,
+  rank,
+  priority,
   onAccept,
   onPickup,
   onComplete,
@@ -31,6 +35,8 @@ function RescueCard({
   donation: FoodDonation
   uid: string
   role: UserProfile["role"]
+  rank?: number
+  priority?: Priority
   onAccept: Action
   onPickup: (donation: FoodDonation, code: string) => Promise<void>
   onComplete: Action
@@ -85,6 +91,15 @@ function RescueCard({
       />
 
       <div className="p-6">
+        {priority && (
+          <p className="mb-2 flex items-center gap-2 text-xs font-semibold">
+            {rank != null && <span className="rounded-full bg-black px-2 py-0.5 text-white">#{rank}</span>}
+            <span className={`rounded-full px-2 py-0.5 ${TIER_STYLE[priority.tier]}`}>
+              {TIER_LABEL[priority.tier]}
+            </span>
+            <span className="text-gray-400">priority {priority.score}/100</span>
+          </p>
+        )}
         <h3 className="text-xl font-bold">{donation.title}</h3>
 
         <div className="mt-4 space-y-2 text-sm text-gray-600">
@@ -255,6 +270,7 @@ function MyRescues() {
   const { user, profile, role } = useAuth()
   const donations = useCharityStore((state) => state.donations)
   const loading = useCharityStore((state) => state.loading)
+  const now = useNow() // the queue re-ranks itself as food ages
 
   if (!user || !profile || !role) return null
 
@@ -273,18 +289,24 @@ function MyRescues() {
     return d.rescuedBy === uid
   })
 
-  const openTasks = relevant.filter((d) => d.status === "claimed" && !d.volunteerId)
-  const active = relevant.filter(
-    (d) => d.status === "picked-up" || (d.status === "claimed" && d.volunteerId)
-  )
+  // Dynamic priority: most urgent first, re-ranked every tick
+  const byPriority = (a: FoodDonation, b: FoodDonation) =>
+    priorityOf(b, now).score - priorityOf(a, now).score
+
+  const openTasks = relevant.filter((d) => d.status === "claimed" && !d.volunteerId).sort(byPriority)
+  const active = relevant
+    .filter((d) => d.status === "picked-up" || (d.status === "claimed" && d.volunteerId))
+    .sort(byPriority)
   const done = relevant.filter((d) => d.status === "completed")
 
-  const card = (d: FoodDonation) => (
+  const card = (d: FoodDonation, rank?: number) => (
     <RescueCard
       key={d.id}
       donation={d}
       uid={uid}
       role={role}
+      rank={rank}
+      priority={d.status === "completed" ? undefined : priorityOf(d, now)}
       onAccept={onAccept}
       onPickup={onPickup}
       onComplete={onComplete}
@@ -344,13 +366,13 @@ function MyRescues() {
               hint={isVolunteer ? "Claimed by an NGO, needs a driver." : undefined}
               count={openTasks.length}
             >
-              {openTasks.map(card)}
+              {openTasks.map((d, i) => card(d, i + 1))}
             </Section>
             <Section title="In progress" count={active.length}>
-              {active.map(card)}
+              {active.map((d, i) => card(d, i + 1))}
             </Section>
             <Section title="Delivered" count={done.length}>
-              {done.map(card)}
+              {done.map((d) => card(d))}
             </Section>
           </>
         )}

@@ -1,14 +1,22 @@
-// AI food-photo analysis: one Claude vision call that both auto-fills the
+// AI food-photo analysis: one vision call that both auto-fills the
 // donation form and screens the photo for spam / unsafe food.
 //
+// Two interchangeable providers, picked by which key is set:
+//   GEMINI_API_KEY    → Google Gemini (free tier from Google AI Studio)
+//   ANTHROPIC_API_KEY → Anthropic Claude
+// Set AI_PROVIDER=gemini|claude to force one when both keys exist.
+//
 // Runs server-side only (Netlify Function in production, Vite middleware in
-// dev) so the Anthropic API key never reaches the browser.
+// dev) so API keys never reach the browser.
 
 import Anthropic from "@anthropic-ai/sdk"
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod"
+import { ApiError as GeminiApiError, GoogleGenAI } from "@google/genai"
 import { z } from "zod"
 
-const DEFAULT_MODEL = "claude-opus-5-5"
+const DEFAULT_CLAUDE_MODEL = "claude-opus-5-5"
+// Google's recommended fast, free-tier multimodal model for new projects
+const DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite"
 const MAX_IMAGE_BASE64_CHARS = 5_000_000 // ~3.7 MB image
 const ALLOWED_MEDIA_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const
 
@@ -71,11 +79,75 @@ function validate(body: unknown): AnalyzeRequestBody | string {
   }
 }
 
+type Provider = "gemini" | "claude"
+
+export function pickProvider(env: Env): Provider | null {
+  const forced = env.AI_PROVIDER?.toLowerCase()
+  if (forced === "gemini" && env.GEMINI_API_KEY) return "gemini"
+  if (forced === "claude" && env.ANTHROPIC_API_KEY) return "claude"
+  if (env.GEMINI_API_KEY) return "gemini"
+  if (env.ANTHROPIC_API_KEY) return "claude"
+  return null
+}
+
+// Clamp numbers to sensible ranges whichever model answered
+function tidy(result: FoodAnalysis): FoodAnalysis {
+  return {
+    ...result,
+    suggestedTitle: result.suggestedTitle.slice(0, 80),
+    estimatedServings: Math.max(0, Math.round(result.estimatedServings)),
+    safeHours: Math.min(72, Math.max(1, Math.round(result.safeHours))),
+  }
+}
+
+// Same schema as JSON Schema, minus the "$schema" marker Gemini doesn't need
+const { $schema: _unused, ...GEMINI_SCHEMA } = z.toJSONSchema(FoodAnalysisSchema)
+
+async function analyzeWithGemini(body: AnalyzeRequestBody, env: Env): Promise<FoodAnalysis> {
+  const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY })
+
+  const response = await ai.models.generateContent({
+    model: env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL,
+    contents: [
+      {
+        role: "user",
+        parts: [
+          { inlineData: { mimeType: body.mediaType, data: body.imageBase64 } },
+          { text: PROMPT(body) },
+        ],
+      },
+    ],
+    config: {
+      responseMimeType: "application/json",
+      responseJsonSchema: GEMINI_SCHEMA,
+      temperature: 0.2,
+    },
+  })
+
+  const text = response.text
+  if (!text) {
+    throw new AnalysisError(422, "The AI returned no answer for this image (it may have been blocked).")
+  }
+
+  const parsed = FoodAnalysisSchema.safeParse(JSON.parse(text))
+  if (!parsed.success) {
+    console.error("Gemini returned unexpected JSON:", parsed.error.message)
+    throw new AnalysisError(502, "The AI response could not be read. Try again.")
+  }
+  return tidy(parsed.data)
+}
+
 export async function analyzeFood(body: AnalyzeRequestBody, env: Env): Promise<FoodAnalysis> {
+  return pickProvider(env) === "gemini"
+    ? analyzeWithGemini(body, env)
+    : analyzeWithClaude(body, env)
+}
+
+async function analyzeWithClaude(body: AnalyzeRequestBody, env: Env): Promise<FoodAnalysis> {
   const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY })
 
   const response = await client.beta.messages.parse({
-    model: env.ANTHROPIC_MODEL || DEFAULT_MODEL,
+    model: env.ANTHROPIC_MODEL || DEFAULT_CLAUDE_MODEL,
     max_tokens: 4000,
     // If a safety classifier declines, Anthropic re-runs on its recommended fallback model
     betas: ["server-side-fallback-2026-07-01"],
@@ -105,13 +177,7 @@ export async function analyzeFood(body: AnalyzeRequestBody, env: Env): Promise<F
     throw new AnalysisError(502, "The AI response could not be read. Try again.")
   }
 
-  const result = response.parsed_output
-  return {
-    ...result,
-    suggestedTitle: result.suggestedTitle.slice(0, 80),
-    estimatedServings: Math.max(0, Math.round(result.estimatedServings)),
-    safeHours: Math.min(72, Math.max(1, Math.round(result.safeHours))),
-  }
+  return tidy(response.parsed_output)
 }
 
 class AnalysisError extends Error {
@@ -126,9 +192,9 @@ class AnalysisError extends Error {
 export async function handleAnalyzeRequest(request: Request, env: Env): Promise<Response> {
   if (request.method !== "POST") return json(405, { error: "Use POST." })
 
-  if (!env.ANTHROPIC_API_KEY) {
+  if (!pickProvider(env)) {
     return json(503, {
-      error: "AI is not configured. Add ANTHROPIC_API_KEY to .env.local (dev) or Netlify environment variables.",
+      error: "AI is not configured. Add GEMINI_API_KEY (free) or ANTHROPIC_API_KEY to .env.local (dev) or Netlify environment variables.",
     })
   }
 
@@ -145,6 +211,19 @@ export async function handleAnalyzeRequest(request: Request, env: Env): Promise<
     return json(200, { analysis })
   } catch (error) {
     if (error instanceof AnalysisError) return json(error.status, { error: error.message })
+    if (error instanceof GeminiApiError) {
+      console.error(`Gemini API error ${error.status}:`, error.message)
+      if (error.status === 429) {
+        return json(429, { error: "Free AI limit reached for now. Wait a minute and try again." })
+      }
+      if (error.status === 400 || error.status === 401 || error.status === 403) {
+        return json(503, { error: "The Gemini API key is invalid or the model isn't available on it." })
+      }
+      return json(502, { error: "AI service error. Try again." })
+    }
+    if (error instanceof SyntaxError) {
+      return json(502, { error: "The AI response could not be read. Try again." })
+    }
     if (error instanceof Anthropic.AuthenticationError) {
       return json(503, { error: "The Anthropic API key is invalid." })
     }

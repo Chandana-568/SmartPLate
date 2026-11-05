@@ -15,7 +15,7 @@ export class AuthError extends Error {}
 export async function verifyFirebaseUser(request: Request, env: Env): Promise<string> {
   const header = request.headers.get("authorization") ?? ""
   const token = header.startsWith("Bearer ") ? header.slice(7) : ""
-  if (!token) throw new AuthError("Please log in to use AI auto-fill.")
+  if (!token) throw new AuthError("Please log in first.")
 
   // Emulator tokens are unsigned and only exist on this computer
   if (env.VITE_USE_EMULATORS === "true") {

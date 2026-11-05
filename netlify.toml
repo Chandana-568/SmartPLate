@@ -11,6 +11,12 @@
   to = "/.netlify/functions/analyze-food"
   status = 200
 
+# WhatsApp notifications → Netlify Function
+[[redirects]]
+  from = "/api/notify"
+  to = "/.netlify/functions/notify"
+  status = 200
+
 # Single-page app: let React Router handle every other path
 [[redirects]]
   from = "/*"

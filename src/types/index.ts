@@ -41,6 +41,11 @@ export interface UserProfile {
   orgName: string
   phone: string
   createdAt: number
+
+  // NGO WhatsApp alerts (set from My Rescues)
+  whatsappOptIn?: boolean
+  latitude?: number | null
+  longitude?: number | null
 }
 
 export interface FoodDonation {
@@ -78,6 +83,7 @@ export interface FoodDonation {
   riskReasons?: string[]
   imageHash?: string | null
   reviewedBy?: string
+  reviewedAt?: number
 
   // true for sample data loaded from the Admin page ("Clear demo data" removes it)
   seed?: boolean

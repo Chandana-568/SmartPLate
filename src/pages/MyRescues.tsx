@@ -3,6 +3,7 @@ import { useState } from "react"
 import { Link } from "react-router-dom"
 
 import StatusTimeline from "../components/StatusTimeline"
+import WhatsAppSettings from "../components/WhatsAppSettings"
 import { useAuth } from "../context/auth"
 import {
   acceptTask,
@@ -300,6 +301,8 @@ function MyRescues() {
               ? "Accept a task, collect the food with the donor's code, and deliver it to the NGO. Updates appear live."
               : "Track the food you claimed, from the donor to your door. Updates appear live."}
           </p>
+
+          {role === "ngo" && <WhatsAppSettings profile={profile} />}
         </div>
       </section>
 

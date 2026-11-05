@@ -83,7 +83,7 @@ service cloud.firestore {
                  'donorId', 'rescuedBy', 'rescuedByName', 'volunteerId',
                  'volunteerName', 'pickupOtp', 'claimedAt', 'assignedAt',
                  'pickedUpAt', 'completedAt', 'riskScore', 'riskReasons',
-                 'aiAnalysis', 'imageHash', 'reviewedBy']))
+                 'aiAnalysis', 'imageHash', 'reviewedBy', 'reviewedAt']))
 
         // NGO claims available food for itself
         || (hasRole('ngo')

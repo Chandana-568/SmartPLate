@@ -18,29 +18,38 @@ function devApi(env: Record<string, string>): Plugin {
   return {
     name: 'shareplate-dev-api',
     configureServer(server) {
-      server.middlewares.use('/api/analyze-food', async (req, res) => {
-        try {
-          const { handleAnalyzeRequest } = await server.ssrLoadModule('/server/analyzeFood.ts')
-          const body = req.method === 'POST' ? await readBody(req) : undefined
-          const request = new Request('http://localhost/api/analyze-food', {
-            method: req.method,
-            headers: {
-              'content-type': String(req.headers['content-type'] ?? 'application/json'),
-              authorization: String(req.headers.authorization ?? ''),
-            },
-            body,
-          })
-          const response: Response = await handleAnalyzeRequest(request, env)
-          res.statusCode = response.status
-          response.headers.forEach((value, key) => res.setHeader(key, value))
-          res.end(Buffer.from(await response.arrayBuffer()))
-        } catch (error) {
-          console.error('[dev-api]', error)
-          res.statusCode = 500
-          res.setHeader('content-type', 'application/json')
-          res.end(JSON.stringify({ error: 'Dev API crashed. See the terminal.' }))
-        }
-      })
+      // Same routes as netlify.toml: path → [server module, exported handler]
+      const routes: Record<string, [string, string]> = {
+        '/api/analyze-food': ['/server/analyzeFood.ts', 'handleAnalyzeRequest'],
+        '/api/notify': ['/server/notify.ts', 'handleNotifyRequest'],
+      }
+
+      for (const [path, [modulePath, exportName]] of Object.entries(routes)) {
+        server.middlewares.use(path, async (req, res) => {
+          try {
+            const mod = await server.ssrLoadModule(modulePath)
+            const body = req.method === 'POST' ? await readBody(req) : undefined
+            const host = req.headers.host ?? 'localhost'
+            const request = new Request(`http://${host}${path}`, {
+              method: req.method,
+              headers: {
+                'content-type': String(req.headers['content-type'] ?? 'application/json'),
+                authorization: String(req.headers.authorization ?? ''),
+              },
+              body,
+            })
+            const response: Response = await mod[exportName](request, env)
+            res.statusCode = response.status
+            response.headers.forEach((value, key) => res.setHeader(key, value))
+            res.end(Buffer.from(await response.arrayBuffer()))
+          } catch (error) {
+            console.error('[dev-api]', error)
+            res.statusCode = 500
+            res.setHeader('content-type', 'application/json')
+            res.end(JSON.stringify({ error: 'Dev API crashed. See the terminal.' }))
+          }
+        })
+      }
     },
   }
 }

@@ -10,6 +10,7 @@ import {
 
 import { db } from "../firebase"
 import { generatePickupCode } from "../utils/donationStatus"
+import { notifyNgos } from "./notifyService"
 
 import type { FoodDonation, UserProfile } from "../types"
 
@@ -44,6 +45,8 @@ export const addDonationToFirestore = async (
   batch.set(otpRef(ref.id), { code: generatePickupCode() })
 
   await batch.commit()
+  // WhatsApp the nearest NGOs (flagged posts wait for admin approval)
+  if (status === "available") notifyNgos("posted", ref.id)
   return ref.id
 }
 
@@ -93,6 +96,7 @@ export const claimDonation = async (
       claimedAt: Date.now(),
     })
   })
+  notifyNgos("claimed", donationId)
 }
 
 // Volunteer accepts a delivery task. Transaction stops two volunteers
@@ -121,6 +125,7 @@ export const acceptTask = async (
       assignedAt: Date.now(),
     })
   })
+  notifyNgos("assigned", donationId)
 }
 
 // Volunteer (or an NGO collecting it themselves) picks the food up.
@@ -138,6 +143,7 @@ export const markPickedUp = async (
       pickupOtp: pickupOtp.trim(),
       pickedUpAt: Date.now(),
     })
+    notifyNgos("picked-up", donationId)
   } catch (error) {
     if ((error as { code?: string }).code === "permission-denied") {
       throw new Error("Wrong pickup code. Ask the donor for their 4-digit code.")
@@ -152,6 +158,7 @@ export const markCompleted = async (donationId: string) => {
     status: "completed",
     completedAt: Date.now(),
   })
+  notifyNgos("completed", donationId)
 }
 
 // Admin approves a flagged listing so NGOs can see it
@@ -159,7 +166,9 @@ export const approveDonation = async (donationId: string, adminUid: string) => {
   await updateDoc(doc(db, "donations", donationId), {
     status: "available",
     reviewedBy: adminUid,
+    reviewedAt: Date.now(),
   })
+  notifyNgos("posted", donationId)
 }
 
 // Donor withdraws food that nobody has claimed yet (admins: reject a flagged listing)

@@ -1,8 +1,10 @@
+import { auth } from "../firebase"
 import type { FoodAnalysis } from "../types"
 
 export class AiUnavailableError extends Error {}
 
-// Calls our own server endpoint (never Anthropic directly: the key stays server-side)
+// Calls our own server endpoint (never the AI provider directly: keys stay
+// server-side). The Firebase ID token proves the caller is signed in.
 export async function analyzeFoodPhoto(input: {
   base64: string
   mediaType: string
@@ -10,11 +12,17 @@ export async function analyzeFoodPhoto(input: {
   description?: string
   quantity?: number
 }): Promise<FoodAnalysis> {
+  const token = await auth.currentUser?.getIdToken()
+  if (!token) throw new AiUnavailableError("Log in to use AI auto-fill.")
+
   let response: Response
   try {
     response = await fetch("/api/analyze-food", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify({
         imageBase64: input.base64,
         mediaType: input.mediaType,

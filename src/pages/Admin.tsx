@@ -7,7 +7,9 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 
+import ImpactCharts from "../components/ImpactCharts"
 import { useAuth } from "../context/auth"
+import { clearDemoData, loadDemoData } from "../services/demoDataService"
 import {
   approveDonation,
   cancelDonation,
@@ -96,7 +98,7 @@ function FlaggedQueue({ donations }: { donations: FoodDonation[] }) {
                     type="button"
                     disabled={busyId === d.id || !user}
                     onClick={() => user && act(d.id, () => approveDonation(d.id, user.uid))}
-                    className="flex-1 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:bg-gray-400"
+                    className="flex-1 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:bg-gray-400 md:flex-none"
                   >
                     Approve
                   </button>
@@ -109,7 +111,7 @@ function FlaggedQueue({ donations }: { donations: FoodDonation[] }) {
                       act(d.id, () => cancelDonation(d.id))
                     }
                   }}
-                  className="flex-1 rounded-full border border-red-200 px-5 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+                  className="flex-1 rounded-full border border-red-200 px-5 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50 md:flex-none"
                 >
                   Reject
                 </button>
@@ -118,6 +120,64 @@ function FlaggedQueue({ donations }: { donations: FoodDonation[] }) {
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+// Load / clear the realistic demo dataset (every seeded doc has seed: true)
+function DemoDataPanel({ donations }: { donations: FoodDonation[] }) {
+  const { user } = useAuth()
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState("")
+  const seeded = donations.filter((d) => d.seed).length
+
+  const run = async (action: () => Promise<string>) => {
+    try {
+      setBusy(true)
+      setMessage(await action())
+    } catch (err) {
+      console.error("Demo data action failed:", err)
+      setMessage("That didn't work. Make sure you're logged in as admin and the latest rules are published.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="mt-8 flex flex-col gap-3 rounded-2xl border border-dashed p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="text-sm">
+        <p className="font-semibold">Demo data</p>
+        <p className="text-gray-500">
+          {seeded > 0
+            ? `${seeded} demo listings loaded. Clear them before going live.`
+            : "Fill the app with realistic sample donations for your demo."}
+        </p>
+        {message && <p className="mt-1 font-medium text-gray-700">{message}</p>}
+      </div>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          disabled={busy || !user || seeded > 0}
+          onClick={() =>
+            user && run(async () => `Loaded ${await loadDemoData({ uid: user.uid, email: user.email ?? "" })} demo listings.`)
+          }
+          className="rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:bg-gray-300"
+        >
+          Load demo data
+        </button>
+        <button
+          type="button"
+          disabled={busy || seeded === 0}
+          onClick={() => {
+            if (window.confirm("Delete all demo listings?")) {
+              run(async () => `Removed ${await clearDemoData()} demo listings.`)
+            }
+          }}
+          className="rounded-full border px-5 py-2.5 text-sm font-semibold transition hover:bg-gray-50 disabled:opacity-40"
+        >
+          Clear demo data
+        </button>
+      </div>
     </div>
   )
 }
@@ -160,6 +220,8 @@ function Admin() {
             Monitor food donations and rescue activity
             across the SharePlate community.
           </p>
+
+          <DemoDataPanel donations={donations} />
 
         </div>
       </section>
@@ -264,6 +326,8 @@ function Admin() {
         </div>
 
         <FlaggedQueue donations={donations} />
+
+        <ImpactCharts donations={donations} />
 
         {/* Donations Table */}
         <div className="mt-10 rounded-3xl border bg-white p-6 md:p-8">

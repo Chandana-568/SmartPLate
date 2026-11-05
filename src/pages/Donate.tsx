@@ -77,12 +77,13 @@ function Donate() {
         setPickupBefore(toLocalInputValue(safeUntil))
       }
     } catch (err) {
-      console.error("AI analysis failed:", err)
       setAnalysis(null)
       if (err instanceof AiUnavailableError) {
+        console.info("AI auto-fill unavailable:", err.message)
         setAiStatus("unavailable")
         setAiMessage("AI auto-fill isn't available right now. Fill in the form yourself.")
       } else {
+        console.error("AI analysis failed:", err)
         setAiStatus("error")
         setAiMessage(err instanceof Error ? err.message : "AI analysis failed.")
       }

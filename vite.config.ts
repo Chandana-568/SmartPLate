@@ -24,7 +24,10 @@ function devApi(env: Record<string, string>): Plugin {
           const body = req.method === 'POST' ? await readBody(req) : undefined
           const request = new Request('http://localhost/api/analyze-food', {
             method: req.method,
-            headers: { 'content-type': String(req.headers['content-type'] ?? 'application/json') },
+            headers: {
+              'content-type': String(req.headers['content-type'] ?? 'application/json'),
+              authorization: String(req.headers.authorization ?? ''),
+            },
             body,
           })
           const response: Response = await handleAnalyzeRequest(request, env)

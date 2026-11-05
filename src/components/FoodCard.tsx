@@ -31,6 +31,14 @@ function FoodCard({ donation, distance }: FoodCardProps) {
         <img
           src={donation.image}
           alt={donation.title}
+          onError={(event) => {
+            // Broken or deleted photo: show a neutral food picture instead
+            const img = event.currentTarget
+            if (!img.dataset.fallback) {
+              img.dataset.fallback = "1"
+              img.src = "https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=800&q=70&fm=jpg"
+            }
+          }}
           className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
         />
 

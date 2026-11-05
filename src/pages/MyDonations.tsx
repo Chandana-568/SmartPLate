@@ -2,7 +2,6 @@ import { KeyRound } from "lucide-react"
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 
-import FreshnessBar from "../components/FreshnessBar"
 import StatusTimeline from "../components/StatusTimeline"
 import { useAuth } from "../context/auth"
 import {
@@ -16,16 +15,13 @@ import {
   formatTime,
   isExpired,
 } from "../utils/donationStatus"
-import { expiredBeforePickup } from "../utils/secondLife"
-import SecondLifeDemo from "../components/SecondLifeDemo"
 
 // Badge text + colour for a donation, from the donor's point of view
 function badgeFor(donation: FoodDonation) {
   if (donation.status === "under_review") {
     return { label: "Under review", style: "bg-orange-100 text-orange-700" }
   }
-  // Expired before pickup: on its way to animals or compost
-  if (expiredBeforePickup(donation)) return { label: "♻️ Second life", style: "bg-green-100 text-green-800" }
+  if (isExpired(donation)) return { label: "Expired", style: "bg-red-100 text-red-700" }
   switch (deliveryStage(donation)) {
     case "posted":
       return { label: "Available", style: "bg-green-100 text-green-700" }
@@ -183,13 +179,9 @@ function MyDonations() {
                         {donation.foodType}
                       </p>
                       <p>
-                        <span className="font-semibold">Safe until:</span>{" "}
+                        <span className="font-semibold">Pickup before:</span>{" "}
                         {formatTime(donation.pickupBefore)}
                       </p>
-                    </div>
-
-                    <div className="mt-4">
-                      <FreshnessBar donation={donation} />
                     </div>
 
                     {donation.status === "under_review" && (
@@ -199,26 +191,24 @@ function MyDonations() {
                       </p>
                     )}
 
-                    {/* Second life: expired food goes to animals or compost, not a landfill */}
-                    <div className="mt-5">
-                      <SecondLifeDemo donation={donation} />
-                    </div>
-
                     {showCode && <PickupCode donationId={donation.id} />}
 
                     <div className="mt-6">
                       <StatusTimeline donation={donation} />
                     </div>
 
-                    {(donation.status === "available" || donation.status === "under_review") &&
-                      !isExpired(donation) && (
+                    {(donation.status === "available" || donation.status === "under_review") && (
                       <button
                         type="button"
                         disabled={cancellingId === donation.id}
                         onClick={() => handleCancel(donation)}
                         className="mt-6 w-full rounded-full border border-red-200 px-5 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50"
                       >
-                        {cancellingId === donation.id ? "Removing..." : "Cancel Donation"}
+                        {cancellingId === donation.id
+                          ? "Removing..."
+                          : isExpired(donation)
+                            ? "Remove Expired Listing"
+                            : "Cancel Donation"}
                       </button>
                     )}
                   </div>

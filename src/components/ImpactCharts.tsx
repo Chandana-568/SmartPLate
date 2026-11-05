@@ -10,7 +10,7 @@ import {
 
 import type { FoodDonation } from "../types"
 import { isExpired } from "../utils/donationStatus"
-import { computeImpact, formatNumber } from "../utils/impact"
+import { computeImpact, formatNumber, KG_PER_MEAL } from "../utils/impact"
 
 // One validated series color (passes contrast + lightness checks on white);
 // every chart here is single-series, so names live on the axis, not in color.
@@ -88,12 +88,11 @@ function ImpactCharts({ donations }: { donations: FoodDonation[] }) {
   const daily = mealsPerDay(donations)
   const donors = topDonors(donations)
   const statuses = statusCounts(donations)
-  const dest = impact.destinations
 
   const tiles = [
     { label: "Meals delivered", value: formatNumber(impact.meals), note: `${impact.rescues} completed rescues` },
-    { label: "Food kept out of landfill", value: `${formatNumber(dest.handled)} kg`, note: `${formatNumber(dest.people)} kg eaten + ${formatNumber(dest.diverted)} kg second life` },
-    { label: "CO₂e avoided (est.)", value: `${formatNumber(impact.co2Kg)} kg`, note: "2.5 kg per kg eaten · 0.5 per kg composted/fed" },
+    { label: "Food saved from waste", value: `${formatNumber(impact.kgSaved)} kg`, note: `≈ ${KG_PER_MEAL} kg per meal` },
+    { label: "CO₂e avoided", value: `${formatNumber(impact.co2Kg)} kg`, note: "≈ 2.5 kg CO₂e per kg of food" },
     { label: "NGOs served", value: formatNumber(impact.ngos), note: `${impact.donors} donors on the platform` },
   ]
 
@@ -111,45 +110,6 @@ function ImpactCharts({ donations }: { donations: FoodDonation[] }) {
             <p className="mt-2 text-xs text-gray-500">{tile.note}</p>
           </div>
         ))}
-      </div>
-
-      {/* Where every kilogram went: the food recovery hierarchy */}
-      <div className="mt-6 rounded-3xl border bg-white p-6">
-        <h3 className="text-lg font-bold">Where the food went</h3>
-        <p className="mt-1 text-sm text-gray-500">
-          People first, then animals, then compost or biogas. Never the bin.
-        </p>
-        <div className="mt-5 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {[
-            { icon: "🍽️", label: "Eaten by people", kgValue: dest.people },
-            { icon: "🐾", label: "Animal feed", kgValue: dest.animalFeed },
-            { icon: "🌱", label: "Compost / biogas", kgValue: dest.compost },
-            { icon: "🚚", label: "On the way to a second life", kgValue: dest.awaitingPartner },
-          ].map(({ icon, label, kgValue }) => (
-            <div key={label} className="rounded-2xl bg-gray-50 p-4">
-              <p className="text-sm text-gray-500">
-                <span aria-hidden="true">{icon}</span> {label}
-              </p>
-              <p className="mt-2 text-2xl font-bold tabular-nums">{formatNumber(kgValue)} kg</p>
-              <p className="text-xs text-gray-400">
-                {dest.handled + dest.awaitingPartner + dest.landfill > 0
-                  ? `${Math.round((kgValue / (dest.handled + dest.awaitingPartner + dest.landfill)) * 100)}% of all food`
-                  : "—"}
-              </p>
-            </div>
-          ))}
-          <div className={`rounded-2xl p-4 ${dest.landfill === 0 ? "bg-green-50" : "bg-red-50"}`}>
-            <p className={`text-sm ${dest.landfill === 0 ? "text-green-800" : "text-red-700"}`}>
-              <span aria-hidden="true">🗑️</span> Landfill
-            </p>
-            <p className={`mt-2 text-2xl font-bold tabular-nums ${dest.landfill === 0 ? "text-green-800" : "text-red-700"}`}>
-              {formatNumber(dest.landfill)} kg
-            </p>
-            <p className={`text-xs ${dest.landfill === 0 ? "text-green-700" : "text-red-600"}`}>
-              {dest.landfill === 0 ? "✓ Zero waste to landfill" : "Sent to landfill"}
-            </p>
-          </div>
-        </div>
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">

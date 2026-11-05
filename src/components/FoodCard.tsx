@@ -2,27 +2,14 @@ import { Clock, MapPin, Users, Navigation } from "lucide-react"
 import { Link } from "react-router-dom"
 import type { FoodDonation } from "../types"
 import { formatTime } from "../utils/donationStatus"
-import { useNow } from "../hooks/useNow"
-import { getFreshness, type FreshnessStage } from "../utils/freshness"
 import { riskLevel } from "../utils/riskScore"
-import FreshnessBar from "./FreshnessBar"
 
 interface FoodCardProps {
   donation: FoodDonation
   distance?: number | null
 }
 
-const BADGE_STYLE: Record<FreshnessStage, string> = {
-  fresh: "bg-green-100 text-green-800",
-  soon: "bg-yellow-100 text-yellow-800",
-  urgent: "bg-red-100 text-red-700",
-  expired: "bg-gray-200 text-gray-700",
-}
-
 function FoodCard({ donation, distance }: FoodCardProps) {
-  const now = useNow()
-  const freshness = getFreshness(donation, now)
-
   const openInMaps = () => {
     const query =
       donation.latitude != null && donation.longitude != null
@@ -70,14 +57,24 @@ function FoodCard({ donation, distance }: FoodCardProps) {
           </div>
         )}
 
-        {/* Live freshness badge (matches the bar below) */}
-        {freshness && (
-          <div className="absolute left-4 top-4">
-            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${BADGE_STYLE[freshness.stage]}`}>
-              {freshness.label}
-            </span>
-          </div>
-        )}
+        {/* Urgency Badge */}
+        <div className="absolute left-4 top-4">
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-semibold ${
+              donation.urgency === "high"
+                ? "bg-red-100 text-red-700"
+                : donation.urgency === "medium"
+                  ? "bg-yellow-100 text-yellow-700"
+                  : "bg-green-100 text-green-700"
+            }`}
+          >
+            {donation.urgency === "high"
+              ? "Urgent"
+              : donation.urgency === "medium"
+                ? "Pickup Soon"
+                : "Available"}
+          </span>
+        </div>
       </div>
 
       {/* Content */}
@@ -113,19 +110,14 @@ function FoodCard({ donation, distance }: FoodCardProps) {
             </div>
           )}
 
-          {/* Expiry */}
+          {/* Pickup Time */}
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
             <span>
-              Safe until {formatTime(donation.pickupBefore)}
+              Pickup before {formatTime(donation.pickupBefore)}
             </span>
           </div>
 
-        </div>
-
-        {/* Live freshness: green → amber → red */}
-        <div className="mt-4">
-          <FreshnessBar donation={donation} />
         </div>
 
         {/* Map Button */}

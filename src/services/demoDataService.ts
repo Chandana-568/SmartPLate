@@ -78,13 +78,6 @@ function analysisFor(food: (typeof FOODS)[number], servings: number): FoodAnalys
     looksSpoiledOrUnsafe: false,
     textIsSpam: false,
     concerns: [],
-    containsMeatFishEgg: food.foodType !== "Vegetarian",
-    animalFeedSafe: food.foodType === "Vegetarian",
-    secondLifeRoute: food.foodType === "Vegetarian" ? "animal-feed" : "compost",
-    secondLifeReason:
-      food.foodType === "Vegetarian"
-        ? `Plain vegetarian ${food.title.toLowerCase()}: fine for cattle or poultry feed`
-        : "Contains chicken or egg: compost only",
   }
 }
 
@@ -104,12 +97,8 @@ export function buildDemoDonations(admin: { uid: string; email: string }, now = 
     const place = PLACES[i % PLACES.length]
     const servings = [40, 25, 60, 120, 35, 18, 80, 30, 50, 45, 22, 70][i % 12]
     const completed = status === "completed"
-    // Delivered ones are spread over the last 13 days. Live ones are posted
-    // at different times so the freshness bars show a mix of green/amber/red.
-    const usedShare = [0.15, 0.6, 0.85, 0.35, 0.7, 0.9, 0.25][i % 7] // share of the safe window already gone
-    const createdAt = completed
-      ? now - (13 - i) * DAY - (i % 5) * HOUR
-      : now - Math.max(65 * MIN, usedShare * food.safeHours * HOUR)
+    // Delivered ones are spread over the last 13 days; the rest are from today
+    const createdAt = completed ? now - (13 - i) * DAY - (i % 5) * HOUR : now - (i % 4) * 25 * MIN - 20 * MIN
     const ngo = NGOS[i % NGOS.length]
     const volunteer = VOLUNTEERS[i % VOLUNTEERS.length]
     const hasNgo = status !== "available"
@@ -126,7 +115,6 @@ export function buildDemoDonations(admin: { uid: string; email: string }, now = 
       latitude: place.lat,
       longitude: place.lng,
       pickupBefore: localInput(createdAt + food.safeHours * HOUR),
-      expiresAt: createdAt + food.safeHours * HOUR,
       urgency: food.safeHours <= 4 ? "high" : "medium",
       status,
       donorName: DONORS[i % DONORS.length],
@@ -158,7 +146,6 @@ export function buildDemoDonations(admin: { uid: string; email: string }, now = 
     latitude: PLACES[0].lat,
     longitude: PLACES[0].lng,
     pickupBefore: localInput(now + 5 * HOUR),
-    expiresAt: now + 5 * HOUR,
     urgency: "medium",
     status: "under_review",
     donorName: "Unknown Seller",
@@ -184,45 +171,6 @@ export function buildDemoDonations(admin: { uid: string; email: string }, now = 
     ],
     imageHash: null,
     createdAt: now - 10 * MIN,
-  })
-
-  // Expired food for the second-life demo: never for people any more
-  // Each shows a different stage of the simulated second-life journey
-  const expired: { food: number; place: number; servings: number; expiredAgo: number }[] = [
-    { food: 2, place: 3, servings: 30, expiredAgo: 10 * MIN }, // veg → just routed to a poultry farm
-    { food: 3, place: 6, servings: 25, expiredAgo: 40 * MIN }, // chicken → being collected for compost
-    { food: 6, place: 1, servings: 40, expiredAgo: 5 * HOUR }, // veg → already received as animal feed
-  ]
-  expired.forEach(({ food: f, place: p, servings, expiredAgo }, k) => {
-    const food = FOODS[f]
-    const place = PLACES[p]
-    const expiresAt = now - expiredAgo
-    const createdAt = expiresAt - food.safeHours * HOUR
-    seeds.push({
-      seed: true,
-      title: `${servings} servings ${food.title.toLowerCase()}`,
-      description: food.description,
-      quantity: servings,
-      foodType: food.foodType,
-      location: place.name,
-      latitude: place.lat,
-      longitude: place.lng,
-      pickupBefore: localInput(expiresAt),
-      expiresAt,
-      urgency: "medium",
-      status: "available",
-      donorName: DONORS[(k + 2) % DONORS.length],
-      donorId: admin.uid,
-      donorEmail: admin.email,
-      image: IMG(IMAGES[(k + 5) % IMAGES.length]),
-      rescuedBy: null,
-      volunteerId: null,
-      aiAnalysis: analysisFor(food, servings),
-      riskScore: 0,
-      riskReasons: [],
-      imageHash: null,
-      createdAt,
-    })
   })
 
   return seeds

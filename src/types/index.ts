@@ -21,16 +21,6 @@ export interface FoodAnalysis {
   looksSpoiledOrUnsafe: boolean
   textIsSpam: boolean
   concerns: string[]
-
-  // Climate-aware expiry (missing on older analyses)
-  safeHoursReason?: string
-  weather?: { tempC: number; humidity: number; source: string } | null
-
-  // Second life (missing on analyses made before Step 3)
-  containsMeatFishEgg?: boolean
-  animalFeedSafe?: boolean
-  secondLifeRoute?: "animal-feed" | "compost"
-  secondLifeReason?: string
 }
 
 export type Role = "donor" | "ngo" | "volunteer" | "admin"
@@ -67,10 +57,7 @@ export interface FoodDonation {
   location: string
   latitude: number | null
   longitude: number | null
-  // Donor's "safe to eat until", as typed (local time, for display)
   pickupBefore: string
-  // Same moment in epoch ms, so security rules can enforce expiry
-  expiresAt?: number
   urgency: Urgency
   status: FoodStatus
   donorName: string

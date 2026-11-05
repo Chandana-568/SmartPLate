@@ -10,10 +10,7 @@ import { Link, useNavigate, useParams } from "react-router-dom"
 
 import { useAuth } from "../context/auth"
 import AIInsightBox from "../components/AIInsightBox"
-import FreshnessBar from "../components/FreshnessBar"
 import StatusTimeline from "../components/StatusTimeline"
-import TimeMachine from "../components/TimeMachine"
-import SecondLifeDemo from "../components/SecondLifeDemo"
 import { claimDonation } from "../services/donationService"
 import { useCharityStore } from "../store/useCharityStore"
 import {
@@ -292,26 +289,22 @@ function FoodDetails() {
 
                 </div>
 
-                {/* Expiry + live freshness */}
-                <div className="flex items-start gap-4">
+                {/* Pickup Time */}
+                <div className="flex items-center gap-4">
 
                   <div className="rounded-full bg-gray-100 p-3">
                     <Clock className="h-5 w-5" />
                   </div>
 
-                  <div className="flex-1">
+                  <div>
                     <p className="text-sm text-gray-500">
-                      Safe to eat until
+                      Pickup Before
                     </p>
 
                     <p className={`font-semibold ${expired ? "text-red-600" : ""}`}>
                       {formatTime(donation.pickupBefore)}
                       {expired && " (expired)"}
                     </p>
-
-                    <div className="mt-2">
-                      <FreshnessBar donation={donation} size="md" />
-                    </div>
                   </div>
 
                 </div>
@@ -368,11 +361,6 @@ function FoodDetails() {
                 {claimLabel}
               </button>
 
-              {/* Expired before pickup: automatically routed to animals or compost */}
-              <div className="mt-4">
-                <SecondLifeDemo donation={donation} />
-              </div>
-
               {claimError && (
                 <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
                   {claimError}
@@ -382,13 +370,6 @@ function FoodDetails() {
               {donation.aiAnalysis && (
                 <div className="mt-8">
                   <AIInsightBox analysis={donation.aiAnalysis} />
-                </div>
-              )}
-
-              {/* Admin demo control: age this one listing */}
-              {role === "admin" && (
-                <div className="mt-8">
-                  <TimeMachine donations={[donation]} compact />
                 </div>
               )}
 

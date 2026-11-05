@@ -133,12 +133,6 @@ export function buildMessage(event: NotifyEvent, d: Donation, link: string, km?:
   }
 }
 
-// Keeps the first (nearest) entry per phone number
-function uniqueByPhone<T extends { phone: string }>(list: T[]): T[] {
-  const seen = new Set<string>()
-  return list.filter((item) => !seen.has(item.phone) && Boolean(seen.add(item.phone)))
-}
-
 // Remembers recent sends so double-clicks don't double-message
 const sentRecently = new Map<string, number>()
 function alreadySent(key: string, now: number) {
@@ -206,14 +200,17 @@ export async function handleNotifyRequest(request: Request, env: Env): Promise<R
       .map((n) => ({ phone: n.phone, km: distanceKm(lat!, lng!, n.latitude!, n.longitude!) }))
       .filter((n) => n.km <= NEARBY_KM)
       .sort((a, b) => a.km - b.km)
-    // Nobody has shared a location yet: fall back to a few opted-in NGOs.
-    // De-duplicate phones first (demo accounts often share one), then take the nearest.
-    recipients = uniqueByPhone(located.length ? located : reachable.map((n) => ({ phone: n.phone })))
+    // Nobody has shared a location yet: fall back to a few opted-in NGOs
+    recipients = located.length ? located : reachable.map((n) => ({ phone: n.phone }))
     recipients = recipients.slice(0, MAX_NEARBY_NGOS)
   } else {
     const ngo = reachable.find((n) => n.id === donation.rescuedBy)
     if (ngo) recipients = [{ phone: ngo.phone }]
   }
+
+  // Several NGO accounts can share one phone (e.g. demo accounts): message it once
+  const seen = new Set<string>()
+  recipients = recipients.filter((r) => !seen.has(r.phone) && Boolean(seen.add(r.phone)))
 
   if (recipients.length === 0) return json(200, { sent: 0, skipped: "no opted-in NGO to notify" })
 

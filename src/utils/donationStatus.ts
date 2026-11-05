@@ -21,11 +21,7 @@ export function deliveryStage(donation: FoodDonation): DeliveryStage {
 // Unclaimed food whose pickup deadline has passed is no longer safe to offer.
 export function isExpired(donation: FoodDonation, now = Date.now()) {
   if (donation.status !== "available") return false
-  // Same moment the security rules check (expiresAt), when present
-  const deadline =
-    typeof donation.expiresAt === "number"
-      ? donation.expiresAt
-      : new Date(donation.pickupBefore).getTime()
+  const deadline = new Date(donation.pickupBefore).getTime()
   return Number.isFinite(deadline) && deadline < now
 }
 

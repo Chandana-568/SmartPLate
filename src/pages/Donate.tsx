@@ -3,8 +3,6 @@ import { useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
 import AIInsightBox from "../components/AIInsightBox"
-import FreshnessBar from "../components/FreshnessBar"
-import { useNow } from "../hooks/useNow"
 import { useAuth } from "../context/auth"
 import { AiUnavailableError, analyzeFoodPhoto } from "../services/aiService"
 import { addDonationToFirestore } from "../services/donationService"
@@ -24,17 +22,11 @@ function toLocalInputValue(date: Date) {
 
 type AiStatus = "idle" | "analyzing" | "done" | "unavailable" | "error"
 
-const HOUR_MS = 60 * 60 * 1000
-const MIN_SAFE_MS = 30 * 60 * 1000
-const MAX_SAFE_MS = 72 * HOUR_MS
-const QUICK_PICKS = [2, 4, 8, 24] // hours from now
-
 function Donate() {
   const navigate = useNavigate()
   const { user, profile } = useAuth()
   const allDonations = useCharityStore((state) => state.donations)
   const fileInput = useRef<HTMLInputElement>(null)
-  const now = useNow() // live clock for the expiry limits and preview
 
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
@@ -42,8 +34,6 @@ function Donate() {
   const [quantity, setQuantity] = useState("")
   const [location, setLocation] = useState("")
   const [pickupBefore, setPickupBefore] = useState("")
-  // true while the expiry is the AI's suggestion (so a weather re-check may update it)
-  const [expiryFromAi, setExpiryFromAi] = useState(false)
 
   const [photo, setPhoto] = useState<CompressedImage | null>(null)
   const [imageHash, setImageHash] = useState<string | null>(null)
@@ -61,10 +51,7 @@ function Donate() {
 
   // ---------------- AI photo analysis ----------------
 
-  const runAnalysis = async (
-    image: CompressedImage,
-    coords: { lat: number | null; lng: number | null } = { lat: latitude, lng: longitude }
-  ) => {
+  const runAnalysis = async (image: CompressedImage) => {
     setAiStatus("analyzing")
     setAiMessage("")
     try {
@@ -74,8 +61,6 @@ function Donate() {
         title,
         description,
         quantity: quantity ? Number(quantity) : undefined,
-        latitude: coords.lat,
-        longitude: coords.lng,
       })
       setAnalysis(result)
       setAiStatus("done")
@@ -87,11 +72,9 @@ function Donate() {
         setQuantity(String(result.estimatedServings))
       }
       setFoodType(result.foodType)
-      // Fill the expiry, or update it if the AI set it before (e.g. now with weather)
-      if (!pickupBefore || expiryFromAi) {
+      if (!pickupBefore) {
         const safeUntil = new Date(Date.now() + result.safeHours * 60 * 60 * 1000)
         setPickupBefore(toLocalInputValue(safeUntil))
-        setExpiryFromAi(true)
       }
     } catch (err) {
       setAnalysis(null)
@@ -145,12 +128,9 @@ function Donate() {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        const { latitude: lat, longitude: lng } = position.coords
-        setLatitude(lat)
-        setLongitude(lng)
+        setLatitude(position.coords.latitude)
+        setLongitude(position.coords.longitude)
         setLocationLoading(false)
-        // Photo already analysed without weather: re-check with today's temperature
-        if (photo && analysis && !analysis.weather) runAnalysis(photo, { lat, lng })
       },
       () => {
         setLocationError("Unable to get your location. Please allow location access.")
@@ -170,22 +150,7 @@ function Donate() {
     }
 
     if (!title.trim() || !description.trim() || !quantity || !location.trim() || !pickupBefore) {
-      setError(
-        !pickupBefore
-          ? "Please set until when the food is safe to eat."
-          : "Please fill in all required fields."
-      )
-      return
-    }
-
-    // Expiry must leave time for a pickup, and be realistic for surplus food
-    const safeMs = new Date(pickupBefore).getTime() - Date.now()
-    if (!Number.isFinite(safeMs) || safeMs < MIN_SAFE_MS) {
-      setError("The 'safe until' time must be at least 30 minutes from now, so there's time to pick it up.")
-      return
-    }
-    if (safeMs > MAX_SAFE_MS) {
-      setError("Surplus food listings can be safe for at most 3 days. Please choose an earlier time.")
+      setError("Please fill in all required fields.")
       return
     }
 
@@ -223,7 +188,6 @@ function Donate() {
           latitude,
           longitude,
           pickupBefore,
-          expiresAt: new Date(pickupBefore).getTime(),
           image: photo?.dataUrl ?? DEFAULT_IMAGE,
           urgency: analysis && analysis.safeHours <= 4 ? "high" : "medium",
           donorName: profile?.orgName || user.displayName || user.email || "Community Donor",
@@ -408,61 +372,19 @@ function Donate() {
             {locationError && <p className="mt-3 text-sm text-red-600">{locationError}</p>}
           </div>
 
-          {/* Expiry (mandatory) */}
+          {/* Pickup Time */}
           <div className="mt-6">
-            <label className="text-sm font-semibold" htmlFor="safe-until">
-              Food safe to eat until (expiry) *
-            </label>
-            <p className="mt-1 text-xs text-gray-500">
-              After this time the food is no longer offered to people.
-            </p>
-
-            <div className="mt-2 flex flex-wrap gap-2">
-              {QUICK_PICKS.map((hours) => (
-                <button
-                  key={hours}
-                  type="button"
-                  onClick={() => {
-                    setPickupBefore(toLocalInputValue(new Date(Date.now() + hours * HOUR_MS)))
-                    setExpiryFromAi(false)
-                  }}
-                  className="rounded-full border px-3 py-1.5 text-xs font-semibold transition hover:bg-gray-50"
-                >
-                  +{hours} h
-                </button>
-              ))}
-            </div>
-
+            <label className="text-sm font-semibold">Pickup before *</label>
             <input
-              id="safe-until"
               type="datetime-local"
-              required
               value={pickupBefore}
-              min={toLocalInputValue(new Date(now + MIN_SAFE_MS))}
-              max={toLocalInputValue(new Date(now + MAX_SAFE_MS))}
-              onChange={(event) => {
-                setPickupBefore(event.target.value)
-                setExpiryFromAi(false)
-              }}
+              onChange={(event) => setPickupBefore(event.target.value)}
               className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
             />
-
             {analysis && (
               <p className="mt-2 text-xs text-gray-500">
-                {analysis.weather ? `🌡️ ${analysis.weather.tempC}°C now · ` : ""}
-                AI suggests this food stays safe for about {analysis.safeHours} hours
-                {analysis.safeHoursReason ? `: ${analysis.safeHoursReason}` : "."}
-                {!analysis.weather && latitude == null && (
-                  <> Tap <span className="font-semibold">📍 Use My Location</span> to adjust for today's temperature.</>
-                )}
+                AI suggests this food stays safe for about {analysis.safeHours} hours.
               </p>
-            )}
-
-            {pickupBefore && (
-              <div className="mt-3 rounded-xl bg-gray-50 px-4 py-3">
-                <p className="mb-2 text-xs font-semibold text-gray-500">Preview: how NGOs will see freshness</p>
-                <FreshnessBar donation={{ pickupBefore, createdAt: now, status: "available" }} size="md" />
-              </div>
             )}
           </div>
 

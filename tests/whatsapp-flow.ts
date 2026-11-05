@@ -55,8 +55,7 @@ async function main() {
   const batch = writeBatch(donor.db)
   batch.set(ref, {
     title: "40 servings veg biryani", description: "Fresh", foodType: "Vegetarian", quantity: 40,
-    location: "Vijayanagar, Mysuru", ...here, pickupBefore: "2026-11-05T19:30", expiresAt: Date.now() + 3 * 3600e3,
-    image: "", urgency: "high",
+    location: "Vijayanagar, Mysuru", ...here, pickupBefore: "2026-11-05T19:30", image: "", urgency: "high",
     donorName: "Spice Route Kitchen", donorId: donor.uid, donorEmail: "", aiAnalysis: null, riskScore: 0,
     riskReasons: [], imageHash: null, status: "available", rescuedBy: null, volunteerId: null, createdAt: Date.now(),
   })
@@ -94,9 +93,6 @@ async function main() {
     check(`'${event}' update → only the claiming NGO`, r.status === 200 && to.length === 1 && to[0] === "+919876543210", JSON.stringify(r.body))
     check(`'${event}' message text`, pattern.test(msg), msg)
   }
-
-  // The partner "expired" alert was removed: second life is a simulated demo now
-  check("Old 'expired' partner event is refused (400)", (await notify(donor, "expired", id)).status === 400)
 
   const failed = results.filter((r) => !r.ok)
   for (const r of results) console.log(`${r.ok ? "PASS" : "FAIL"}  ${r.name}${r.detail ? `  (${r.detail})` : ""}`)

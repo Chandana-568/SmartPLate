@@ -15,7 +15,6 @@ import { ApiError as GeminiApiError, GoogleGenAI } from "@google/genai"
 import { z } from "zod"
 
 import { allowRequest, verifyFirebaseUser } from "./auth.ts"
-import { currentWeather, validCoords, type Weather } from "./weather.ts"
 
 const DEFAULT_CLAUDE_MODEL = "claude-opus-5-5"
 // Google's recommended fast, free-tier multimodal model for new projects
@@ -29,34 +28,16 @@ export const FoodAnalysisSchema = z.object({
   suggestedDescription: z.string().describe("One or two friendly sentences for NGOs: what it is, how it is packed"),
   foodType: z.enum(["Vegetarian", "Mixed"]).describe("Vegetarian if no meat, fish or egg is visible, otherwise Mixed"),
   estimatedServings: z.number().describe("Your best estimate of how many people this feeds; 0 if not food"),
-  safeHours: z.number().describe(
-    "Hours this food stays safe unrefrigerated from now, at the current temperature if given; at about 25°C cooked rice/curry ~4, bread ~24, sealed packaged ~48; shorter in heat"
-  ),
-  safeHoursReason: z.string().describe(
-    "One short reason for safeHours, mentioning the temperature when given, e.g. 'Cooked rice at 34°C: spoils fast, ~2 h'"
-  ),
+  safeHours: z.number().describe("Hours this food stays safe at room temperature from now; cooked rice/curry ~4, bread ~24, packaged ~48"),
   storageTip: z.string().describe("One short handling tip for the volunteer"),
   isRealFoodPhoto: z.boolean().describe("True only for a genuine camera photo of real food"),
   looksStockOrScreenshot: z.boolean().describe("True if it looks like a stock photo, a watermarked image, a screenshot or a photo of a screen"),
   looksSpoiledOrUnsafe: z.boolean().describe("True if you see mould, rot, flies, garbage, half-eaten scraps or unsafe packaging"),
   textIsSpam: z.boolean().describe("True if the donor's text contains ads, links, phone numbers, abuse or gibberish; false if no text was given"),
   concerns: z.array(z.string()).describe("Short reasons for anything suspicious; empty if all looks fine"),
-
-  // ---- Second life: where this food should go if nobody eats it in time ----
-  containsMeatFishEgg: z.boolean().describe("True if you can see any meat, chicken, fish, egg or bones"),
-  animalFeedSafe: z.boolean().describe(
-    "True only if, once past its safe time for people, this food would still be reasonable feed for cattle or poultry: plain cooked grains, rice, chapati, bread, vegetables or fruit, with no meat, fish, egg or bones, no mould or rot, and not mostly sweets, chocolate, very salty, very oily or heavily spiced food"
-  ),
-  secondLifeRoute: z.enum(["animal-feed", "compost"]).describe(
-    "Best destination if this food expires: animal-feed when animalFeedSafe is true, otherwise compost"
-  ),
-  secondLifeReason: z.string().describe(
-    "One short reason for that choice, e.g. 'Plain veg rice and dal: fine for cattle feed' or 'Contains chicken: compost only'"
-  ),
 })
 
-// What the endpoint returns: the AI's answer plus the weather it was given
-export type FoodAnalysis = z.infer<typeof FoodAnalysisSchema> & { weather?: Weather | null }
+export type FoodAnalysis = z.infer<typeof FoodAnalysisSchema>
 
 export interface AnalyzeRequestBody {
   imageBase64: string
@@ -64,24 +45,13 @@ export interface AnalyzeRequestBody {
   title?: string
   description?: string
   quantity?: number
-  latitude?: number
-  longitude?: number
 }
 
 type Env = Record<string, string | undefined>
 
-const weatherLine = (weather?: Weather | null) =>
-  weather
-    ? `Current conditions at the pickup location: ${weather.tempC}°C, ${weather.humidity}% humidity. Above about 30°C (the food-safety "danger zone"), bacteria in cooked rice, dal, curries, dairy, meat and egg dishes multiply fast, so cut safeHours sharply (roughly half the 25°C time, or less above 35°C). High humidity also shortens it. Dry, sealed or packaged items are affected much less. Mention the temperature in safeHoursReason.`
-    : "No live temperature is available: assume about 30°C, typical for India, and say so in safeHoursReason."
-
-const PROMPT = (body: AnalyzeRequestBody, weather?: Weather | null) => `You screen food donations for SharePlate, a platform in India that sends surplus food from restaurants, hostels, wedding halls and homes to NGOs and shelters.
+const PROMPT = (body: AnalyzeRequestBody) => `You screen food donations for SharePlate, a platform in India that sends surplus food from restaurants, hostels, wedding halls and homes to NGOs and shelters.
 
 Look at the photo and fill in every field. Be practical: estimate servings from visible containers and portions, and be conservative about how long food stays safe.
-
-${weatherLine(weather)}
-
-SharePlate never lets surplus food reach a landfill. If nobody eats it in time, it goes to a goshala or poultry farm as animal feed, or to a compost or biogas unit. Judge that second life cautiously: when unsure whether something is safe for animals, choose compost.
 
 Donor's text so far (may be empty):
 title: ${JSON.stringify(body.title ?? "")}
@@ -108,7 +78,6 @@ function validate(body: unknown): AnalyzeRequestBody | string {
     title: typeof b.title === "string" ? b.title.slice(0, 200) : undefined,
     description: typeof b.description === "string" ? b.description.slice(0, 1000) : undefined,
     quantity: typeof b.quantity === "number" ? b.quantity : undefined,
-    ...(validCoords(b.latitude, b.longitude) ? { latitude: b.latitude, longitude: b.longitude } : {}),
   }
 }
 
@@ -151,7 +120,7 @@ async function withRetry<T>(call: () => Promise<T>, attempts = 4): Promise<T> {
 // Same schema as JSON Schema, minus the "$schema" marker Gemini doesn't need
 const { $schema: _unused, ...GEMINI_SCHEMA } = z.toJSONSchema(FoodAnalysisSchema)
 
-async function analyzeWithGemini(body: AnalyzeRequestBody, env: Env, weather: Weather | null): Promise<FoodAnalysis> {
+async function analyzeWithGemini(body: AnalyzeRequestBody, env: Env): Promise<FoodAnalysis> {
   const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY })
 
   const response = await withRetry(() => ai.models.generateContent({
@@ -161,7 +130,7 @@ async function analyzeWithGemini(body: AnalyzeRequestBody, env: Env, weather: We
         role: "user",
         parts: [
           { inlineData: { mimeType: body.mediaType, data: body.imageBase64 } },
-          { text: PROMPT(body, weather) },
+          { text: PROMPT(body) },
         ],
       },
     ],
@@ -186,21 +155,12 @@ async function analyzeWithGemini(body: AnalyzeRequestBody, env: Env, weather: We
 }
 
 export async function analyzeFood(body: AnalyzeRequestBody, env: Env): Promise<FoodAnalysis> {
-  // Live temperature at the pickup spot makes the safe-time estimate climate-aware
-  const weather =
-    body.latitude != null && body.longitude != null
-      ? await currentWeather(body.latitude, body.longitude)
-      : null
-
-  const result =
-    pickProvider(env) === "gemini"
-      ? await analyzeWithGemini(body, env, weather)
-      : await analyzeWithClaude(body, env, weather)
-
-  return { ...result, weather }
+  return pickProvider(env) === "gemini"
+    ? analyzeWithGemini(body, env)
+    : analyzeWithClaude(body, env)
 }
 
-async function analyzeWithClaude(body: AnalyzeRequestBody, env: Env, weather: Weather | null): Promise<FoodAnalysis> {
+async function analyzeWithClaude(body: AnalyzeRequestBody, env: Env): Promise<FoodAnalysis> {
   const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY })
 
   const response = await client.beta.messages.parse({
@@ -221,7 +181,7 @@ async function analyzeWithClaude(body: AnalyzeRequestBody, env: Env, weather: We
             type: "image",
             source: { type: "base64", media_type: body.mediaType, data: body.imageBase64 },
           },
-          { type: "text", text: PROMPT(body, weather) },
+          { type: "text", text: PROMPT(body) },
         ],
       },
     ],

@@ -1,4 +1,4 @@
-import { AlertTriangle, Clock, Recycle, ShieldCheck, Sparkles, Thermometer, Users } from "lucide-react"
+import { AlertTriangle, Clock, ShieldCheck, Sparkles, Users } from "lucide-react"
 
 import type { FoodAnalysis } from "../types"
 
@@ -36,35 +36,8 @@ function AIInsightBox({ analysis }: { analysis: FoodAnalysis }) {
         </div>
       </div>
 
-      {/* Climate-aware expiry */}
-      {(analysis.weather || analysis.safeHoursReason) && (
-        <p className="mt-3 flex items-start gap-2 rounded-xl bg-white/70 px-3 py-2 text-sm text-gray-700">
-          <Thermometer className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>
-            {analysis.weather && (
-              <span className="font-semibold">
-                {analysis.weather.tempC}°C, {analysis.weather.humidity}% humidity now.{" "}
-              </span>
-            )}
-            {analysis.safeHoursReason}
-          </span>
-        </p>
-      )}
-
       {analysis.storageTip && (
         <p className="mt-3 text-sm text-gray-700">💡 {analysis.storageTip}</p>
-      )}
-
-      {/* Second life, if nobody eats it in time */}
-      {analysis.secondLifeRoute && (
-        <p className="mt-3 flex items-start gap-2 rounded-xl bg-white/70 px-3 py-2 text-sm text-gray-700">
-          <Recycle className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>
-            <span className="font-semibold">If it expires:</span>{" "}
-            {analysis.secondLifeRoute === "animal-feed" ? "🐾 OK for animal feed" : "🌱 Compost only"}
-            {analysis.secondLifeReason ? `: ${analysis.secondLifeReason}` : ""}
-          </span>
-        </p>
       )}
 
       {clean ? (

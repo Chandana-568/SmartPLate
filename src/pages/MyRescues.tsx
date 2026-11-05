@@ -2,11 +2,7 @@ import { ArrowRight, Clock, MapPin, Navigation, Phone, Users } from "lucide-reac
 import { useState } from "react"
 import { Link } from "react-router-dom"
 
-import FreshnessBar from "../components/FreshnessBar"
-import SecondLifeDemo from "../components/SecondLifeDemo"
 import StatusTimeline from "../components/StatusTimeline"
-import { useNow } from "../hooks/useNow"
-import { priorityOf, TIER_LABEL, TIER_STYLE, type Priority } from "../utils/priority"
 import WhatsAppSettings from "../components/WhatsAppSettings"
 import { useAuth } from "../context/auth"
 import {
@@ -27,8 +23,6 @@ function RescueCard({
   donation,
   uid,
   role,
-  rank,
-  priority,
   onAccept,
   onPickup,
   onComplete,
@@ -36,8 +30,6 @@ function RescueCard({
   donation: FoodDonation
   uid: string
   role: UserProfile["role"]
-  rank?: number
-  priority?: Priority
   onAccept: Action
   onPickup: (donation: FoodDonation, code: string) => Promise<void>
   onComplete: Action
@@ -51,23 +43,14 @@ function RescueCard({
   const myClaim = donation.rescuedBy === uid
   const unassigned = !donation.volunteerId
 
-  // Claimed, but its safe time ran out before pickup: not for people any more
-  const now = useNow()
-  const expiredBeforePickup =
-    donation.status === "claimed" &&
-    typeof donation.expiresAt === "number" &&
-    now > donation.expiresAt
-
   const canAccept =
     (role === "volunteer" || isAdmin) &&
     donation.status === "claimed" &&
-    !expiredBeforePickup &&
     unassigned
 
   // The assigned volunteer, or the NGO collecting it itself
   const canPickUp =
     donation.status === "claimed" &&
-    !expiredBeforePickup &&
     (mine || isAdmin || (myClaim && unassigned))
 
   const canComplete =
@@ -101,15 +84,6 @@ function RescueCard({
       />
 
       <div className="p-6">
-        {priority && (
-          <p className="mb-2 flex items-center gap-2 text-xs font-semibold">
-            {rank != null && <span className="rounded-full bg-black px-2 py-0.5 text-white">#{rank}</span>}
-            <span className={`rounded-full px-2 py-0.5 ${TIER_STYLE[priority.tier]}`}>
-              {TIER_LABEL[priority.tier]}
-            </span>
-            <span className="text-gray-400">priority {priority.score}/100</span>
-          </p>
-        )}
         <h3 className="text-xl font-bold">{donation.title}</h3>
 
         <div className="mt-4 space-y-2 text-sm text-gray-600">
@@ -120,7 +94,7 @@ function RescueCard({
             <MapPin className="h-4 w-4" /> Pickup: {donation.location} ({donation.donorName})
           </p>
           <p className="flex items-center gap-2">
-            <Clock className="h-4 w-4" /> Safe until {formatTime(donation.pickupBefore)}
+            <Clock className="h-4 w-4" /> Before {formatTime(donation.pickupBefore)}
           </p>
           {donation.rescuedByName && (
             <p className="flex items-center gap-2">
@@ -129,30 +103,17 @@ function RescueCard({
           )}
         </div>
 
-        {/* How much safe time is left: drivers prioritise red first */}
-        <div className="mt-4">
-          <FreshnessBar donation={donation} />
-        </div>
-
         <div className="mt-5">
           <StatusTimeline donation={donation} variant="compact" />
         </div>
 
         {/* Status messages */}
-        {expiredBeforePickup && (
-          <div className="mt-5 space-y-2">
-            <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
-              ⚠️ Its safe time ran out before pickup, so it's no longer for people.
-            </p>
-            <SecondLifeDemo donation={donation} compact />
-          </div>
-        )}
-        {!expiredBeforePickup && donation.status === "claimed" && unassigned && myClaim && !isAdmin && (
+        {donation.status === "claimed" && unassigned && myClaim && !isAdmin && (
           <p className="mt-5 rounded-xl bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
             Waiting for a volunteer. You can also collect it yourself with the donor's code.
           </p>
         )}
-        {!expiredBeforePickup && donation.status === "claimed" && !unassigned && !mine && (
+        {donation.status === "claimed" && !unassigned && !mine && (
           <p className="mt-5 rounded-xl bg-blue-50 px-4 py-3 text-sm text-blue-800">
             🚴 {donation.volunteerName} is heading to the donor.
           </p>
@@ -288,7 +249,6 @@ function MyRescues() {
   const { user, profile, role } = useAuth()
   const donations = useCharityStore((state) => state.donations)
   const loading = useCharityStore((state) => state.loading)
-  const now = useNow() // the queue re-ranks itself as food ages
 
   if (!user || !profile || !role) return null
 
@@ -303,32 +263,22 @@ function MyRescues() {
   const relevant = donations.filter((d) => {
     if (d.status === "available" || d.status === "under_review") return false
     if (isAdmin) return true
-    if (isVolunteer) {
-      // Open tasks only while still safe to eat; your own tasks always show
-      const expired = typeof d.expiresAt === "number" && now > d.expiresAt
-      return (d.status === "claimed" && !d.volunteerId && !expired) || d.volunteerId === uid
-    }
+    if (isVolunteer) return (d.status === "claimed" && !d.volunteerId) || d.volunteerId === uid
     return d.rescuedBy === uid
   })
 
-  // Dynamic priority: most urgent first, re-ranked every tick
-  const byPriority = (a: FoodDonation, b: FoodDonation) =>
-    priorityOf(b, now).score - priorityOf(a, now).score
-
-  const openTasks = relevant.filter((d) => d.status === "claimed" && !d.volunteerId).sort(byPriority)
-  const active = relevant
-    .filter((d) => d.status === "picked-up" || (d.status === "claimed" && d.volunteerId))
-    .sort(byPriority)
+  const openTasks = relevant.filter((d) => d.status === "claimed" && !d.volunteerId)
+  const active = relevant.filter(
+    (d) => d.status === "picked-up" || (d.status === "claimed" && d.volunteerId)
+  )
   const done = relevant.filter((d) => d.status === "completed")
 
-  const card = (d: FoodDonation, rank?: number) => (
+  const card = (d: FoodDonation) => (
     <RescueCard
       key={d.id}
       donation={d}
       uid={uid}
       role={role}
-      rank={rank}
-      priority={d.status === "completed" ? undefined : priorityOf(d, now)}
       onAccept={onAccept}
       onPickup={onPickup}
       onComplete={onComplete}
@@ -388,13 +338,13 @@ function MyRescues() {
               hint={isVolunteer ? "Claimed by an NGO, needs a driver." : undefined}
               count={openTasks.length}
             >
-              {openTasks.map((d, i) => card(d, i + 1))}
+              {openTasks.map(card)}
             </Section>
             <Section title="In progress" count={active.length}>
-              {active.map((d, i) => card(d, i + 1))}
+              {active.map(card)}
             </Section>
             <Section title="Delivered" count={done.length}>
-              {done.map((d) => card(d))}
+              {done.map(card)}
             </Section>
           </>
         )}

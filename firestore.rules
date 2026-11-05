@@ -53,10 +53,8 @@ service cloud.firestore {
       // Donors post food in their own name. AI-flagged posts (risk 70+)
       // must start hidden as "under_review" until an admin approves them.
       // Admins may create any donation (used by "Load demo data")
-      // Donors must set a future "safe until" time (epoch ms in expiresAt).
       allow create: if isAdmin() || (hasRole('donor')
         && request.resource.data.donorId == request.auth.uid
-        && request.resource.data.get('expiresAt', 0) > request.time.toMillis()
         && (request.resource.data.status == 'under_review'
             || (request.resource.data.status == 'available'
                 && request.resource.data.get('riskScore', 0) < 70)));
@@ -75,14 +73,6 @@ service cloud.firestore {
         return resource.data.get('volunteerId', null);
       }
 
-      // Expiry uses the server's clock. Old listings without expiresAt count
-      // as not expired. Expired food is never handed to people (the app shows
-      // it routed to animal feed or compost instead).
-      function isExpired() {
-        return resource.data.get('expiresAt', null) != null
-          && request.time.toMillis() > resource.data.expiresAt;
-      }
-
       allow update: if isAdmin()
 
         // Donor edits details; delivery fields are off limits
@@ -93,30 +83,26 @@ service cloud.firestore {
                  'donorId', 'rescuedBy', 'rescuedByName', 'volunteerId',
                  'volunteerName', 'pickupOtp', 'claimedAt', 'assignedAt',
                  'pickedUpAt', 'completedAt', 'riskScore', 'riskReasons',
-                 'aiAnalysis', 'imageHash', 'reviewedBy', 'reviewedAt',
-                 'expiresAt', 'pickupBefore']))
+                 'aiAnalysis', 'imageHash', 'reviewedBy', 'reviewedAt']))
 
-        // NGO claims available food for itself, only while it's safe to eat
+        // NGO claims available food for itself
         || (hasRole('ngo')
             && resource.data.status == 'available'
-            && !isExpired()
             && request.resource.data.status == 'claimed'
             && request.resource.data.rescuedBy == request.auth.uid
             && changedOnly(['status', 'rescuedBy', 'rescuedByName', 'claimedAt']))
 
-        // Volunteer accepts a claimed task nobody has taken yet (not if expired)
+        // Volunteer accepts a claimed task nobody has taken yet
         || (hasRole('volunteer')
             && resource.data.status == 'claimed'
-            && !isExpired()
             && assignedVolunteer() == null
             && request.resource.data.volunteerId == request.auth.uid
             && changedOnly(['volunteerId', 'volunteerName', 'assignedAt']))
 
         // Assigned volunteer (or the NGO collecting it itself) picks it up
-        // with the donor's correct 4-digit code, only while still safe to eat
+        // with the donor's correct 4-digit code
         || (signedIn()
             && resource.data.status == 'claimed'
-            && !isExpired()
             && request.resource.data.status == 'picked-up'
             && request.resource.data.volunteerId == request.auth.uid
             && (assignedVolunteer() == request.auth.uid

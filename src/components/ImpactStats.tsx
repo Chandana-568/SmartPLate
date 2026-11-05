@@ -8,12 +8,11 @@ function ImpactStats() {
 
   const impact = computeImpact(donations)
 
-  const dest = impact.destinations
   const stats = [
     { value: formatNumber(impact.meals), label: "Meals Rescued" },
-    { value: `${formatNumber(dest.diverted)} kg`, label: "Given a Second Life (animals + compost)" },
-    { value: `${formatNumber(impact.co2Kg)} kg`, label: "CO₂e Avoided (est.)" },
-    { value: `${formatNumber(dest.landfill)} kg`, label: "Sent to Landfill" },
+    { value: `${formatNumber(impact.kgSaved)} kg`, label: "Food Saved from Waste" },
+    { value: `${formatNumber(impact.co2Kg)} kg`, label: "CO₂ Emissions Avoided" },
+    { value: formatNumber(impact.donors), label: "Food Donors" },
   ]
 
   return (
@@ -35,7 +34,7 @@ function ImpactStats() {
         ))}
       </div>
       <p className="pb-4 text-center text-xs text-gray-400">
-        Live from SharePlate · 1 meal ≈ 0.4 kg · estimates: 2.5 kg CO₂e per kg eaten, 0.5 per kg fed to animals or composted
+        Live from SharePlate deliveries · 1 meal ≈ 0.4 kg food ≈ 1 kg CO₂e
       </p>
     </section>
   )

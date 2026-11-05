@@ -5,9 +5,6 @@ import FoodCard from "../components/FoodCard"
 import { useCharityStore } from "../store/useCharityStore"
 import { calculateDistance } from "../utils/distance"
 import { isOpenForClaim } from "../utils/donationStatus"
-import { getFreshness } from "../utils/freshness"
-import { priorityOf } from "../utils/priority"
-import { useNow } from "../hooks/useNow"
 
 function Food() {
   // Live data from the app-wide Firestore subscription
@@ -18,8 +15,6 @@ function Food() {
   const [search, setSearch] = useState("")
   const [foodType, setFoodType] = useState("all")
   const [urgency, setUrgency] = useState("all")
-  const [sortBy, setSortBy] = useState<"priority" | "distance">("priority")
-  const now = useNow() // live: rankings and filters update as food ages
 
   const [userLatitude, setUserLatitude] =
     useState<number | null>(null)
@@ -79,7 +74,7 @@ function Food() {
 
   // Unclaimed and still before its pickup deadline
   const availableDonations =
-    donations.filter((donation) => isOpenForClaim(donation, now))
+    donations.filter((donation) => isOpenForClaim(donation))
 
   // --------------------------------
   // Search + filters
@@ -99,10 +94,9 @@ function Food() {
           foodType === "all" ||
           donation.foodType === foodType
 
-        // Live freshness, not the static urgency chosen at posting time
         const matchesUrgency =
           urgency === "all" ||
-          getFreshness(donation, now)?.stage === urgency
+          donation.urgency === urgency
 
         return (
           matchesSearch &&
@@ -142,19 +136,12 @@ function Food() {
     })
 
   // --------------------------------
-  // Sort: most urgent first (default) or nearest first
+  // Sort nearest first
   // --------------------------------
 
   const sortedDonations =
     [...donationsWithDistance].sort(
       (a, b) => {
-        if (sortBy === "priority") {
-          return (
-            priorityOf(b, now, b.distance).score -
-            priorityOf(a, now, a.distance).score
-          )
-        }
-
         if (a.distance === null) {
           return 1
         }
@@ -283,35 +270,20 @@ function Food() {
             text-sm outline-none"
           >
             <option value="all">
-              All Freshness
+              All Urgency
             </option>
 
-            <option value="urgent">
-              🔴 Urgent
+            <option value="high">
+              Urgent
             </option>
 
-            <option value="soon">
-              🟡 Use soon
+            <option value="medium">
+              Pickup Soon
             </option>
 
-            <option value="fresh">
-              🟢 Fresh
+            <option value="low">
+              Available
             </option>
-          </select>
-
-          {/* Sort */}
-
-          <select
-            value={sortBy}
-            onChange={(event) =>
-              setSortBy(event.target.value as "priority" | "distance")
-            }
-            className="rounded-full border bg-white px-5 py-3
-            text-sm outline-none"
-            aria-label="Sort food"
-          >
-            <option value="priority">🔥 Most urgent first</option>
-            <option value="distance">📍 Nearest first</option>
           </select>
 
           {/* Location */}

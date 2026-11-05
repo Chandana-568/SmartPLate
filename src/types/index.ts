@@ -79,6 +79,9 @@ export interface FoodDonation {
   imageHash?: string | null
   reviewedBy?: string
 
+  // true for sample data loaded from the Admin page ("Clear demo data" removes it)
+  seed?: boolean
+
   createdAt?: number
   claimedAt?: number
   assignedAt?: number

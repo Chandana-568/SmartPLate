@@ -52,11 +52,12 @@ service cloud.firestore {
 
       // Donors post food in their own name. AI-flagged posts (risk 70+)
       // must start hidden as "under_review" until an admin approves them.
-      allow create: if (hasRole('donor') || isAdmin())
+      // Admins may create any donation (used by "Load demo data")
+      allow create: if isAdmin() || (hasRole('donor')
         && request.resource.data.donorId == request.auth.uid
         && (request.resource.data.status == 'under_review'
             || (request.resource.data.status == 'available'
-                && request.resource.data.get('riskScore', 0) < 70));
+                && request.resource.data.get('riskScore', 0) < 70)));
 
       function otpPath() {
         return /databases/$(database)/documents/donations/$(donationId)/private/otp;

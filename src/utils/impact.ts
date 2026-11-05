@@ -14,7 +14,8 @@ export function computeImpact(donations: FoodDonation[]) {
     kgSaved,
     co2Kg: kgSaved * CO2_KG_PER_FOOD_KG,
     rescues: delivered.length,
-    donors: new Set(donations.map((d) => d.donorId)).size,
+    // By name: demo data is owned by one admin account but has several donors
+    donors: new Set(donations.map((d) => d.donorName || d.donorId)).size,
     ngos: new Set(delivered.map((d) => d.rescuedBy).filter(Boolean)).size,
   }
 }

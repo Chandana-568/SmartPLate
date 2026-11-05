@@ -14,6 +14,8 @@ import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod"
 import { ApiError as GeminiApiError, GoogleGenAI } from "@google/genai"
 import { z } from "zod"
 
+import { allowRequest, verifyFirebaseUser } from "./auth.ts"
+
 const DEFAULT_CLAUDE_MODEL = "claude-opus-5-5"
 // Google's recommended fast, free-tier multimodal model for new projects
 const DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite"
@@ -206,6 +208,17 @@ class AnalysisError extends Error {
 // HTTP entry point shared by the Netlify Function and the Vite dev server
 export async function handleAnalyzeRequest(request: Request, env: Env): Promise<Response> {
   if (request.method !== "POST") return json(405, { error: "Use POST." })
+
+  // Only signed-in users may spend the AI quota
+  let uid: string
+  try {
+    uid = await verifyFirebaseUser(request, env)
+  } catch (error) {
+    return json(401, { error: error instanceof Error ? error.message : "Please log in." })
+  }
+  if (!allowRequest(uid)) {
+    return json(429, { error: "You've analysed a lot of photos. Try again in an hour." })
+  }
 
   if (!pickProvider(env)) {
     return json(503, {

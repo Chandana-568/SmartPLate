@@ -198,6 +198,12 @@ async function main() {
     await batch.commit()
   })
 
+  // ---------- Demo data (admin only) ----------
+  await expectAllowed("Admin can load a completed demo delivery", () =>
+    postDonation(admin, { seed: true, status: "completed", rescuedBy: "seed-ngo-0", completedAt: Date.now() }))
+  await expectDenied("Donor can't create an already-completed donation", () =>
+    postDonation(donor, { status: "completed" }))
+
   // ---------- Report ----------
   const failed = results.filter((r) => !r.ok)
   console.log("")

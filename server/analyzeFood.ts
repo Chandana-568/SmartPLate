@@ -100,13 +100,28 @@ function tidy(result: FoodAnalysis): FoodAnalysis {
   }
 }
 
+// The free tier often answers "model is busy" (503) or a passing 500 at peak
+// times. Retry those a few times with a growing pause before giving up.
+async function withRetry<T>(call: () => Promise<T>, attempts = 4): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await call()
+    } catch (error) {
+      const transient =
+        error instanceof GeminiApiError && (error.status === 500 || error.status === 503)
+      if (!transient || attempt >= attempts) throw error
+      await new Promise((resolve) => setTimeout(resolve, 800 * attempt))
+    }
+  }
+}
+
 // Same schema as JSON Schema, minus the "$schema" marker Gemini doesn't need
 const { $schema: _unused, ...GEMINI_SCHEMA } = z.toJSONSchema(FoodAnalysisSchema)
 
 async function analyzeWithGemini(body: AnalyzeRequestBody, env: Env): Promise<FoodAnalysis> {
   const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY })
 
-  const response = await ai.models.generateContent({
+  const response = await withRetry(() => ai.models.generateContent({
     model: env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL,
     contents: [
       {
@@ -122,7 +137,7 @@ async function analyzeWithGemini(body: AnalyzeRequestBody, env: Env): Promise<Fo
       responseJsonSchema: GEMINI_SCHEMA,
       temperature: 0.2,
     },
-  })
+  }))
 
   const text = response.text
   if (!text) {
@@ -215,6 +230,9 @@ export async function handleAnalyzeRequest(request: Request, env: Env): Promise<
       console.error(`Gemini API error ${error.status}:`, error.message)
       if (error.status === 429) {
         return json(429, { error: "Free AI limit reached for now. Wait a minute and try again." })
+      }
+      if (error.status === 503 || error.status === 500) {
+        return json(503, { error: "The free AI is busy right now. Wait a moment and tap Retry." })
       }
       if (error.status === 400 || error.status === 401 || error.status === 403) {
         return json(503, { error: "The Gemini API key is invalid or the model isn't available on it." })

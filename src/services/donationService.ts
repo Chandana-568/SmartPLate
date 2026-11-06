@@ -191,6 +191,12 @@ export const markPickedUp = async (
   }
 }
 
+// Volunteer handed the food over. The NGO still has to confirm.
+export const markDelivered = async (donationId: string) => {
+  await updateDoc(doc(db, "donations", donationId), { deliveredAt: Date.now() })
+  notifyNgos("delivered", donationId)
+}
+
 // NGO confirms the food arrived
 export const markCompleted = async (donationId: string) => {
   await updateDoc(doc(db, "donations", donationId), {

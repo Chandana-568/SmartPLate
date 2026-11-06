@@ -1,6 +1,6 @@
 import { auth } from "../firebase"
 
-export type NotifyEvent = "posted" | "claimed" | "assigned" | "picked-up" | "completed"
+export type NotifyEvent = "posted" | "claimed" | "assigned" | "picked-up" | "delivered" | "completed"
 
 // Asks the server to send WhatsApp updates to NGOs. Best effort: failures are
 // logged and never block the rescue itself.

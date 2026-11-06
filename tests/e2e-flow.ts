@@ -179,6 +179,15 @@ async function main() {
 
   // ---------- Delivery ----------
   await expectDenied("Second NGO can't confirm someone else's delivery", () => complete(ngo2, id))
+  await expectDenied("Volunteer can't confirm on the NGO's behalf", () => complete(volunteer, id))
+  await expectDenied("Other volunteer can't mark it delivered", () =>
+    updateDoc(doc(volunteer2.db, "donations", id), { deliveredAt: Date.now() }))
+  await expectAllowed("Volunteer marks it delivered", () =>
+    updateDoc(doc(volunteer.db, "donations", id), { deliveredAt: Date.now() }))
+  await expectAllowed("Status stays picked-up until the NGO confirms", async () => {
+    const snap = await getDoc(doc(donor.db, "donations", id))
+    if (snap.data()?.status !== "picked-up" || !snap.data()?.deliveredAt) throw new Error(`status is ${snap.data()?.status}`)
+  })
   await expectAllowed("NGO confirms food received", () => complete(ngo, id))
   await expectAllowed("Final status is completed", async () => {
     const snap = await getDoc(doc(anonymous.db, "donations", id))

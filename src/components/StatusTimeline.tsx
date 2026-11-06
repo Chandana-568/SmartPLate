@@ -13,6 +13,7 @@ const ORDER: DeliveryStage[] = [
   "claimed",
   "assigned",
   "picked-up",
+  "delivered",
   "completed",
 ]
 
@@ -31,7 +32,8 @@ function StatusTimeline({ donation, variant = "full" }: StatusTimelineProps) {
     { label: "Claimed", detail: donation.rescuedByName, time: donation.claimedAt },
     { label: "Volunteer assigned", detail: donation.volunteerName, time: donation.assignedAt },
     { label: "Picked up", detail: donation.volunteerName, time: donation.pickedUpAt },
-    { label: "Delivered", detail: donation.rescuedByName, time: donation.completedAt },
+    { label: "Delivered", detail: donation.volunteerName, time: donation.deliveredAt },
+    { label: "Received by NGO", detail: donation.rescuedByName, time: donation.completedAt },
   ]
 
   if (variant === "compact") {

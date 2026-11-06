@@ -42,8 +42,10 @@ function badgeFor(donation: FoodDonation) {
       return { label: "Volunteer coming", style: "bg-blue-100 text-blue-700" }
     case "picked-up":
       return { label: "On the way", style: "bg-blue-100 text-blue-700" }
+    case "delivered":
+      return { label: "Delivered", style: "bg-green-100 text-green-700" }
     default:
-      return { label: "Delivered", style: "bg-gray-100 text-gray-700" }
+      return { label: "✓ Received by NGO", style: "bg-gray-900 text-white" }
   }
 }
 
@@ -78,7 +80,7 @@ function DeliveryContacts({ donation, code }: { donation: FoodDonation; code?: s
         <ContactBox
           uid={donation.volunteerId}
           name={donation.volunteerName || "Volunteer"}
-          label="Volunteer collecting it"
+          label={donation.status === "claimed" ? "Volunteer collecting it" : "Volunteer"}
           demo={demo}
           sms={codeSms(donation.volunteerName || "there")}
           smsLabel={canSendCode ? "SMS code" : "SMS"}

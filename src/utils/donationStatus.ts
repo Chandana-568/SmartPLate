@@ -7,11 +7,12 @@ export type DeliveryStage =
   | "claimed"
   | "assigned"
   | "picked-up"
+  | "delivered"
   | "completed"
 
 export function deliveryStage(donation: FoodDonation): DeliveryStage {
   if (donation.status === "completed") return "completed"
-  if (donation.status === "picked-up") return "picked-up"
+  if (donation.status === "picked-up") return donation.deliveredAt ? "delivered" : "picked-up"
   if (donation.status === "claimed") {
     return donation.volunteerId ? "assigned" : "claimed"
   }

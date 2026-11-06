@@ -9,7 +9,7 @@ import { maskPhone, normalizeIndianPhone, sendWhatsApp, whatsappConfigured, type
 
 type Env = Record<string, string | undefined>
 
-export const EVENTS = ["posted", "claimed", "assigned", "picked-up", "completed"] as const
+export const EVENTS = ["posted", "claimed", "assigned", "picked-up", "delivered", "completed"] as const
 export type NotifyEvent = (typeof EVENTS)[number]
 
 interface Donation {
@@ -30,7 +30,9 @@ interface Donation {
   claimedAt?: number
   assignedAt?: number
   pickedUpAt?: number
+  deliveredAt?: number
   completedAt?: number
+  volunteerRequested?: boolean | null
   reviewedAt?: number
 }
 
@@ -82,6 +84,8 @@ function eventIsGenuine(event: NotifyEvent, d: Donation, now: number) {
       return d.status === "claimed" && Boolean(d.volunteerId) && recent(d.assignedAt)
     case "picked-up":
       return d.status === "picked-up" && recent(d.pickedUpAt)
+    case "delivered":
+      return d.status === "picked-up" && recent(d.deliveredAt)
     case "completed":
       return d.status === "completed" && recent(d.completedAt)
   }
@@ -106,7 +110,9 @@ export function buildMessage(event: NotifyEvent, d: Donation, link: string, km?:
         "✅ *You claimed food on SharePlate*",
         food,
         `📍 Pickup: ${d.location} (${d.donorName})`,
-        "We're finding a volunteer to deliver it. We'll message you at every step.",
+        d.volunteerRequested === false
+          ? "You're collecting it yourself. Ask the donor for the 4-digit pickup code."
+          : "We're finding a volunteer to deliver it. We'll message you at every step.",
         `Track: ${link}`,
       ].join("\n")
     case "assigned":
@@ -122,6 +128,13 @@ export function buildMessage(event: NotifyEvent, d: Donation, link: string, km?:
         food,
         `${d.volunteerName ?? "Your volunteer"} collected it from ${d.donorName} (pickup code verified).`,
         `Track: ${link}`,
+      ].join("\n")
+    case "delivered":
+      return [
+        `🚴 *${d.volunteerName ?? "Your volunteer"} says the food is delivered*`,
+        food,
+        "Please check it and tap *Confirm Food Received* in SharePlate:",
+        link,
       ].join("\n")
     case "completed":
       return [

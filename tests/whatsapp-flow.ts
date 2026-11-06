@@ -83,6 +83,7 @@ async function main() {
     ["claimed", nearNgo, () => updateDoc(doc(nearNgo.db, "donations", id), { status: "claimed", rescuedBy: nearNgo.uid, rescuedByName: "Hope Ashram", claimedAt: Date.now() }), /You claimed/],
     ["assigned", volunteer, () => updateDoc(doc(volunteer.db, "donations", id), { volunteerId: volunteer.uid, volunteerName: "Arjun K", assignedAt: Date.now() }), /Arjun K accepted/],
     ["picked-up", volunteer, () => updateDoc(doc(volunteer.db, "donations", id), { status: "picked-up", volunteerId: volunteer.uid, volunteerName: "Arjun K", pickupOtp: "4821", pickedUpAt: Date.now() }), /on the way to you/],
+    ["delivered", volunteer, () => updateDoc(doc(volunteer.db, "donations", id), { deliveredAt: Date.now() }), /says the food is delivered/],
     ["completed", nearNgo, () => updateDoc(doc(nearNgo.db, "donations", id), { status: "completed", completedAt: Date.now() }), /Delivery complete/],
   ]
   for (const [event, actor, action, pattern] of steps) {

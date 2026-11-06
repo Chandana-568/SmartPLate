@@ -120,5 +120,8 @@ export interface FoodDonation {
   claimedAt?: number
   assignedAt?: number
   pickedUpAt?: number
+  // Volunteer says it's delivered; status stays "picked-up" until the NGO
+  // confirms it received the food (then status "completed")
+  deliveredAt?: number
   completedAt?: number
 }

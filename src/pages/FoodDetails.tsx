@@ -200,8 +200,10 @@ function FoodDetails() {
                     : donation.status === "claimed"
                       ? "Claimed"
                       : donation.status === "picked-up"
-                        ? "Picked Up"
-                        : "Delivered"}
+                        ? donation.deliveredAt
+                          ? "Delivered, awaiting NGO"
+                          : "Picked Up"
+                        : "Received by NGO"}
               </span>
 
               {/* Urgency */}

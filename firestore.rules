@@ -94,7 +94,7 @@ service cloud.firestore {
             && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
                  'donorId', 'rescuedBy', 'rescuedByName', 'volunteerId',
                  'volunteerName', 'pickupOtp', 'claimedAt', 'assignedAt',
-                 'pickedUpAt', 'completedAt', 'riskScore', 'riskReasons',
+                 'pickedUpAt', 'deliveredAt', 'completedAt', 'riskScore', 'riskReasons',
                  'aiAnalysis', 'imageHash', 'reviewedBy', 'reviewedAt',
                  'recycle', 'expiresAt', 'volunteerRequested',
                  'volunteerRequestedAt', 'volunteerNote']))
@@ -150,10 +150,16 @@ service cloud.firestore {
             && changedOnly(['status', 'volunteerId', 'volunteerName',
                             'pickupOtp', 'pickedUpAt']))
 
-        // NGO or volunteer confirms delivery
+        // Volunteer says it's delivered (status stays picked-up)
         || (signedIn()
-            && (resource.data.rescuedBy == request.auth.uid
-                || resource.data.volunteerId == request.auth.uid)
+            && resource.data.volunteerId == request.auth.uid
+            && resource.data.status == 'picked-up'
+            && request.resource.data.status == 'picked-up'
+            && changedOnly(['deliveredAt']))
+
+        // Only the receiving NGO confirms it got the food
+        || (signedIn()
+            && resource.data.rescuedBy == request.auth.uid
             && resource.data.status == 'picked-up'
             && request.resource.data.status == 'completed'
             && changedOnly(['status', 'completedAt']))

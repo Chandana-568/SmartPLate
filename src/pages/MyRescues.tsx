@@ -12,6 +12,7 @@ import {
   acceptTask,
   cancelVolunteerRequest,
   markCompleted,
+  markDelivered,
   markPickedUp,
   releaseClaim,
   requestVolunteer,
@@ -80,8 +81,11 @@ function RescueCard({
     !expiredBeforePickup &&
     (mine || isAdmin || (myClaim && unassigned))
 
-  const canComplete =
-    donation.status === "picked-up" && (myClaim || mine || isAdmin)
+  // Step 1: the volunteer hands it over. Step 2: the NGO confirms it got it.
+  // (An NGO that collected it itself just confirms.)
+  const delivered = donation.status === "picked-up" && Boolean(donation.deliveredAt)
+  const canMarkDelivered = donation.status === "picked-up" && mine && !myClaim && !delivered
+  const canConfirm = donation.status === "picked-up" && (myClaim || isAdmin)
 
   const run = async (action: () => Promise<void>) => {
     try {
@@ -268,9 +272,21 @@ function RescueCard({
             🚴 {donation.volunteerName} is heading to the donor.
           </p>
         )}
-        {donation.status === "picked-up" && !canComplete && (
+        {donation.status === "picked-up" && !delivered && !canMarkDelivered && !(myClaim && mine) && (
           <p className="mt-5 rounded-xl bg-blue-50 px-4 py-3 text-sm text-blue-800">
-            On the way to {donation.rescuedByName}.
+            📦 {donation.volunteerName ?? "The volunteer"} has the food, on the way to {donation.rescuedByName}.
+          </p>
+        )}
+        {delivered && mine && !myClaim && (
+          <p className="mt-5 rounded-xl bg-green-50 px-4 py-3 text-sm text-green-800">
+            ✅ You marked it delivered {formatTime(donation.deliveredAt)}. Waiting for {donation.rescuedByName} to
+            confirm they received it.
+          </p>
+        )}
+        {delivered && canConfirm && (
+          <p className="mt-5 rounded-xl bg-green-50 px-4 py-3 text-sm font-medium text-green-800">
+            🚴 {donation.volunteerName ?? "The volunteer"} says it's delivered ({formatTime(donation.deliveredAt)}).
+            Check the food and confirm you received it.
           </p>
         )}
 
@@ -364,20 +380,33 @@ function RescueCard({
           </form>
         )}
 
-        {canComplete && (
+        {canMarkDelivered && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => run(() => markDelivered(donation.id))}
+            className="mt-5 w-full rounded-full bg-green-600 px-5 py-3 font-semibold text-white transition hover:bg-green-700 disabled:bg-gray-400"
+          >
+            {busy ? "Saving..." : "🚴 Mark Delivered"}
+          </button>
+        )}
+
+        {canConfirm && (
           <button
             type="button"
             disabled={busy}
             onClick={() => run(() => onComplete(donation))}
-            className="mt-5 w-full rounded-full bg-green-600 px-5 py-3 font-semibold text-white transition hover:bg-green-700 disabled:bg-gray-400"
+            className={`mt-5 w-full rounded-full px-5 py-3 font-semibold text-white transition disabled:bg-gray-400 ${
+              delivered || mine ? "bg-green-600 hover:bg-green-700" : "bg-gray-800 hover:bg-black"
+            }`}
           >
-            {busy ? "Saving..." : myClaim ? "Confirm Food Received" : "Mark Delivered"}
+            {busy ? "Saving..." : "✅ Confirm Food Received"}
           </button>
         )}
 
         {donation.status === "completed" && (
           <div className="mt-5 rounded-full bg-green-50 px-5 py-3 text-center font-semibold text-green-700">
-            ✓ Delivered {formatTime(donation.completedAt)}
+            ✓ Received by {donation.rescuedByName ?? "the NGO"} {formatTime(donation.completedAt)}
           </div>
         )}
 

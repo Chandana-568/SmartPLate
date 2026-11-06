@@ -1,4 +1,4 @@
-import { doc, setDoc } from "firebase/firestore"
+import { doc, getDoc, setDoc } from "firebase/firestore"
 import type { User } from "firebase/auth"
 
 import { db } from "../firebase"
@@ -43,4 +43,12 @@ export function homeForRole(role: Role | null): string {
     default:
       return "/onboarding"
   }
+}
+
+// Donor's phone / email, shown only to poultry, compost and biogas units
+// (and admins) collecting expired food
+export async function getContact(uid: string) {
+  const snap = await getDoc(doc(db, "users", uid))
+  const data = snap.exists() ? (snap.data() as Partial<UserProfile>) : {}
+  return { phone: data.phone ?? "", email: data.email ?? "" }
 }

@@ -2,6 +2,7 @@ import { CheckCircle2, Lock, MapPin, Navigation, Recycle, Scale, TimerOff, User 
 import { useState } from "react"
 import { Link } from "react-router-dom"
 
+import DonorContact from "../components/DonorContact"
 import { useAuth } from "../context/auth"
 import { useNow } from "../hooks/useNow"
 import { claimForRecycling, markRecycled } from "../services/donationService"
@@ -97,7 +98,7 @@ function ExpiredFood() {
           <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-gray-900 px-3 py-1 text-xs font-bold uppercase text-white">
             <TimerOff className="h-3.5 w-3.5" /> Expired {ago(now - expiryMs(d))}
           </span>
-          <span className="absolute right-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold shadow">
+          <span className="absolute bottom-3 left-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold shadow">
             {poultryOk ? "🐔 Poultry · 🌱 Compost · ⚡ Biogas" : "🌱 Compost · ⚡ Biogas only"}
           </span>
         </div>
@@ -121,6 +122,9 @@ function ExpiredFood() {
                 </p>
               </div>
 
+              {/* Contact the donor directly */}
+              <DonorContact donation={d} useFor={RECYCLER_TYPES[myType].use} />
+
               {takenByOther ? (
                 <p className="mt-3 rounded-xl bg-teal-50 px-3 py-2 text-sm text-teal-800">
                   ♻️ Being collected by {d.recycle!.byName}
@@ -138,7 +142,7 @@ function ExpiredFood() {
                 <p className="mt-3 rounded-xl bg-gray-100 px-3 py-2 text-sm text-gray-600">{fit.reason}</p>
               ) : isRecycler && !claimableByRecycler(d) ? (
                 <p className="mt-3 rounded-xl bg-gray-100 px-3 py-2 text-sm text-gray-600">
-                  Older listing: contact the donor directly.
+                  Older listing: call or message the donor above to arrange pickup.
                 </p>
               ) : isRecycler && profile ? (
                 <button

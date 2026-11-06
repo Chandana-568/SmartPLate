@@ -56,7 +56,7 @@ export function RecyclerTypePicker({
             aria-pressed={selected}
             onClick={() => onChange(type)}
             className={`rounded-xl border px-3 py-2 text-sm transition ${
-              selected ? "border-black bg-black text-white" : "bg-white hover:border-gray-400"
+              selected ? "border-brand-700 bg-brand-700 text-white" : "bg-white hover:border-gray-400"
             }`}
           >
             <span className="block text-lg">{RECYCLER_TYPES[type].emoji}</span>
@@ -87,7 +87,7 @@ function RolePicker({ value, onChange }: RolePickerProps) {
             aria-pressed={selected}
             className={`flex items-center gap-4 rounded-2xl border px-4 py-3 text-left transition ${
               selected
-                ? "border-black bg-black text-white"
+                ? "border-brand-700 bg-brand-700 text-white"
                 : "bg-white hover:border-gray-400"
             }`}
           >

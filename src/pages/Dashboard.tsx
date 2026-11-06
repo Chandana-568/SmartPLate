@@ -95,7 +95,7 @@ function Dashboard() {
       <section className="border-b bg-white">
         <div className="mx-auto max-w-7xl px-6 py-16">
 
-          <p className="text-sm font-semibold uppercase tracking-widest">
+          <p className="text-sm font-semibold uppercase tracking-widest text-brand-700">
             Your Impact
           </p>
 
@@ -122,7 +122,7 @@ function Dashboard() {
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
 
           {/* Total */}
-          <div className="rounded-3xl border bg-white p-6">
+          <div className="rounded-3xl border bg-white shadow-card p-6">
 
             <div className="flex items-center justify-between">
 
@@ -145,7 +145,7 @@ function Dashboard() {
           </div>
 
           {/* Available */}
-          <div className="rounded-3xl border bg-white p-6">
+          <div className="rounded-3xl border bg-white shadow-card p-6">
 
             <div className="flex items-center justify-between">
 
@@ -168,7 +168,7 @@ function Dashboard() {
           </div>
 
           {/* Active */}
-          <div className="rounded-3xl border bg-white p-6">
+          <div className="rounded-3xl border bg-white shadow-card p-6">
 
             <div className="flex items-center justify-between">
 
@@ -191,7 +191,7 @@ function Dashboard() {
           </div>
 
           {/* Completed */}
-          <div className="rounded-3xl border bg-white p-6">
+          <div className="rounded-3xl border bg-white shadow-card p-6">
 
             <div className="flex items-center justify-between">
 
@@ -216,7 +216,7 @@ function Dashboard() {
         </div>
 
         {/* Community Impact */}
-        <div className="mt-6 rounded-3xl border bg-black p-8 text-white">
+        <div className="mt-6 rounded-3xl border bg-brand-700 p-8 text-white">
 
           <p className="text-sm font-semibold uppercase tracking-widest text-gray-300">
             Community Impact
@@ -233,7 +233,7 @@ function Dashboard() {
         </div>
 
         {/* Achievement */}
-        <div className="mt-6 rounded-3xl border bg-white p-8">
+        <div className="mt-6 rounded-3xl border bg-white shadow-card p-8">
 
           <p className="text-sm font-semibold uppercase tracking-widest text-gray-500">
             Your Achievement
@@ -250,7 +250,7 @@ function Dashboard() {
           <div className="mt-6 h-3 overflow-hidden rounded-full bg-gray-100">
 
             <div
-              className="h-full rounded-full bg-black transition-all"
+              className="h-full rounded-full bg-brand-700 transition-all"
               style={{
                 width: `${Math.min(
                   (completedCount / 11) * 100,
@@ -269,7 +269,7 @@ function Dashboard() {
         </div>
 
         {/* Recent Rescue Activity */}
-        <div className="mt-6 rounded-3xl border bg-white p-8">
+        <div className="mt-6 rounded-3xl border bg-white shadow-card p-8">
 
           <div className="flex items-center justify-between">
 

@@ -1,1 +1,74 @@
 @import "tailwindcss";
+
+/* SharePlate theme: leaf green (sustainability) + saffron (food),
+   on warm cream neutrals instead of cold grey */
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+
+  --color-brand-50: #eefbf3;
+  --color-brand-100: #d6f5e1;
+  --color-brand-200: #afe9c6;
+  --color-brand-300: #7dd6a5;
+  --color-brand-400: #47bc80;
+  --color-brand-500: #23a065;
+  --color-brand-600: #168150;
+  --color-brand-700: #136742;
+  --color-brand-800: #125237;
+  --color-brand-900: #0f432e;
+  --color-brand-950: #07261a;
+
+  --color-saffron-50: #fff8eb;
+  --color-saffron-100: #ffebc6;
+  --color-saffron-300: #ffc35c;
+  --color-saffron-400: #ffab2e;
+  --color-saffron-500: #f98a0c;
+  --color-saffron-600: #dd6507;
+
+  /* Warm neutrals: every gray-* in the app picks these up */
+  --color-gray-50: #fbf8f3;
+  --color-gray-100: #f4efe7;
+  --color-gray-200: #e8e1d6;
+  --color-gray-300: #d5cbbd;
+  --color-gray-400: #a99e90;
+  --color-gray-500: #7b7165;
+  --color-gray-600: #5d554c;
+  --color-gray-700: #473f37;
+  --color-gray-800: #2f2a25;
+  --color-gray-900: #201c18;
+}
+
+@layer base {
+  /* Soft borders everywhere instead of black outlines */
+  *,
+  ::before,
+  ::after {
+    border-color: var(--color-gray-200);
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: var(--color-gray-50);
+    color: var(--color-gray-900);
+  }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.02em;
+  }
+
+  ::selection {
+    background: var(--color-brand-200);
+  }
+}
+
+/* Soft, warm card shadow */
+@utility shadow-card {
+  box-shadow:
+    0 1px 2px rgb(60 40 20 / 0.04),
+    0 10px 30px -14px rgb(60 40 20 / 0.18);
+}

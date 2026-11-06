@@ -21,6 +21,7 @@ import {
   isExpired,
   isOpenForClaim,
 } from "../utils/donationStatus"
+import FoodImage from "../components/FoodImage"
 
 function FoodDetails() {
   const { id } = useParams()
@@ -66,7 +67,7 @@ function FoodDetails() {
           <Link
             to="/food"
             className="mt-8 inline-flex items-center gap-2
-            rounded-full bg-black px-6 py-3 font-semibold
+            rounded-full bg-brand-700 px-6 py-3 font-semibold
             text-white"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -148,7 +149,7 @@ function FoodDetails() {
           to="/food"
           className="inline-flex items-center gap-2
           text-sm font-semibold text-gray-600
-          hover:text-black"
+          hover:text-brand-800"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Food
@@ -167,11 +168,7 @@ function FoodDetails() {
             {/* Image */}
             <div className="h-80 lg:h-full">
 
-              <img
-                src={donation.image}
-                alt={donation.title}
-                className="h-full w-full object-cover"
-              />
+              <FoodImage donation={donation} className="h-full w-full" />
 
             </div>
 
@@ -386,7 +383,7 @@ function FoodDetails() {
                       type="button"
                       onClick={() => handleClaim(false)}
                       disabled={claiming}
-                      className="rounded-full bg-black px-5 py-4 font-semibold text-white transition hover:bg-gray-800 disabled:bg-gray-300"
+                      className="rounded-full bg-brand-700 px-5 py-4 font-semibold text-white transition hover:bg-brand-800 disabled:bg-gray-300"
                     >
                       {claiming ? "Claiming..." : "🚐 We'll collect it"}
                     </button>
@@ -394,7 +391,7 @@ function FoodDetails() {
                       type="button"
                       onClick={() => handleClaim(true)}
                       disabled={claiming}
-                      className="rounded-full border-2 border-black px-5 py-4 font-semibold transition hover:bg-gray-50 disabled:opacity-50"
+                      className="rounded-full border-2 border-brand-700 px-5 py-4 font-semibold transition hover:bg-gray-50 disabled:opacity-50"
                     >
                       {claiming ? "Claiming..." : "🙋 Need a volunteer"}
                     </button>
@@ -409,8 +406,8 @@ function FoodDetails() {
                   onClick={() => (user ? undefined : navigate("/login"))}
                   disabled={Boolean(user) || !open}
                   className="mt-3 w-full rounded-full
-                  bg-black px-6 py-4 font-semibold text-white
-                  transition hover:bg-gray-800
+                  bg-brand-700 px-6 py-4 font-semibold text-white
+                  transition hover:bg-brand-800
                   disabled:cursor-not-allowed
                   disabled:bg-gray-300"
                 >

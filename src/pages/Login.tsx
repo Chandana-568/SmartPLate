@@ -53,7 +53,7 @@ function Login() {
         {/* Header */}
         <div className="text-center">
 
-          <p className="text-sm font-semibold uppercase tracking-widest">
+          <p className="text-sm font-semibold uppercase tracking-widest text-brand-700">
             Welcome Back
           </p>
 
@@ -70,7 +70,7 @@ function Login() {
         {/* Form */}
         <form
           onSubmit={handleSubmit}
-          className="mt-10 rounded-3xl border bg-white p-8"
+          className="mt-10 rounded-3xl border bg-white shadow-card p-8"
         >
 
           {/* Email */}
@@ -87,7 +87,7 @@ function Login() {
                 setEmail(event.target.value)
               }
               placeholder="you@example.com"
-              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
+              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
             />
 
           </div>
@@ -106,7 +106,7 @@ function Login() {
                 setPassword(event.target.value)
               }
               placeholder="Enter your password"
-              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
+              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
             />
 
           </div>
@@ -122,7 +122,7 @@ function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="mt-6 w-full rounded-full bg-black px-6 py-4 font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-6 w-full rounded-full bg-brand-700 px-6 py-4 font-semibold text-white transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "Logging in..." : "Login"}
           </button>
@@ -134,7 +134,7 @@ function Login() {
 
             <Link
               to="/signup"
-              className="font-semibold text-black hover:underline"
+              className="font-semibold text-brand-800 hover:underline"
             >
               Sign up
             </Link>

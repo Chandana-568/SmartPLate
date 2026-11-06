@@ -66,30 +66,34 @@ function Navbar() {
   }
 
   return (
-    <nav className="border-b bg-white">
+    <nav className="sticky top-0 z-40 border-b border-gray-200/70 bg-white/85 backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
 
         {/* Logo */}
         <Link
           to="/"
-          className="flex items-center gap-2 text-2xl font-bold"
+          className="flex items-center gap-2 text-2xl font-extrabold tracking-tight"
         >
-          <Heart className="h-7 w-7" />
-          <span>SharePlate</span>
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-700 shadow-md shadow-brand-700/30">
+            <Heart className="h-5 w-5 fill-white text-white" />
+          </span>
+          <span>
+            Share<span className="text-brand-700">Plate</span>
+          </span>
         </Link>
 
         {/* Desktop Navigation */}
-        <div className="hidden items-center gap-8 md:flex">
+        <div className="hidden items-center gap-1 md:flex">
 
           {navLinks.map((link) => (
             <NavLink
               key={link.path}
               to={link.path}
               className={({ isActive }) =>
-                `text-sm font-medium transition ${
+                `rounded-full px-3.5 py-2 text-sm font-medium transition ${
                   isActive
-                    ? "font-semibold"
-                    : "text-gray-600"
+                    ? "bg-brand-50 font-semibold text-brand-700"
+                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                 }`
               }
             >
@@ -109,7 +113,7 @@ function Navbar() {
                 <span className="flex items-center gap-2 text-sm font-semibold">
                   Hi, {displayName}
                   {roleLabel && (
-                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                    <span className="rounded-full bg-saffron-100 px-2 py-0.5 text-xs font-semibold text-saffron-600">
                       {roleLabel}
                     </span>
                   )}
@@ -138,7 +142,7 @@ function Navbar() {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800"
+                className="rounded-full bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-800"
               >
                 Logout
               </button>
@@ -156,7 +160,7 @@ function Navbar() {
               {/* Sign Up */}
               <Link
                 to="/signup"
-                className="rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800"
+                className="rounded-full bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-800"
               >
                 Sign Up
               </Link>

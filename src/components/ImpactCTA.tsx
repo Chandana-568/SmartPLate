@@ -5,7 +5,7 @@ function ImpactCTA() {
   return (
     <section className="px-6 py-24">
       <div className="mx-auto max-w-7xl">
-        <div className="relative overflow-hidden rounded-[2rem] bg-black px-8 py-16 text-white md:px-16">
+        <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-brand-800 via-brand-700 to-brand-600 px-8 py-16 text-white shadow-2xl shadow-brand-900/20 md:px-16">
 
           <div className="relative z-10 max-w-2xl">
             <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-full bg-white/10">
@@ -16,7 +16,7 @@ function ImpactCTA() {
               One meal rescued is one less meal wasted.
             </h2>
 
-            <p className="mt-6 text-lg leading-8 text-gray-300">
+            <p className="mt-6 text-lg leading-8 text-brand-100">
               Whether you have surplus food or a few hours to volunteer,
               your small action can create a meaningful impact.
             </p>
@@ -24,7 +24,7 @@ function ImpactCTA() {
             <div className="mt-8 flex flex-wrap gap-4">
               <Link
                 to="/donate"
-                className="flex items-center gap-2 rounded-full bg-white px-6 py-3 font-semibold text-black transition hover:bg-gray-200"
+                className="flex items-center gap-2 rounded-full bg-saffron-400 px-6 py-3 font-semibold text-brand-950 transition hover:bg-saffron-300"
               >
                 Donate Food
                 <ArrowRight className="h-4 w-4" />

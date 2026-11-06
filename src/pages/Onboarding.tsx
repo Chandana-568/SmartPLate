@@ -57,7 +57,7 @@ function Onboarding() {
     <main className="min-h-screen bg-gray-50 px-6 py-16">
       <div className="mx-auto max-w-md">
         <div className="text-center">
-          <p className="text-sm font-semibold uppercase tracking-widest">
+          <p className="text-sm font-semibold uppercase tracking-widest text-brand-700">
             One last step
           </p>
           <h1 className="mt-4 text-4xl font-bold">
@@ -67,7 +67,7 @@ function Onboarding() {
 
         <form
           onSubmit={handleSubmit}
-          className="mt-10 rounded-3xl border bg-white p-8"
+          className="mt-10 rounded-3xl border bg-white shadow-card p-8"
         >
           <RolePicker value={role} onChange={setRole} />
           {role === "recycler" && (
@@ -89,7 +89,7 @@ function Onboarding() {
                 type="text"
                 value={orgName}
                 onChange={(event) => setOrgName(event.target.value)}
-                className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
+                className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
               />
             </div>
           )}
@@ -103,7 +103,7 @@ function Onboarding() {
               value={phone}
               onChange={(event) => setPhone(event.target.value)}
               placeholder="+91 98765 43210"
-              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
+              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
             />
           </div>
 
@@ -116,7 +116,7 @@ function Onboarding() {
           <button
             type="submit"
             disabled={saving}
-            className="mt-6 w-full rounded-full bg-black px-6 py-4 font-semibold text-white transition hover:bg-gray-800 disabled:bg-gray-400"
+            className="mt-6 w-full rounded-full bg-brand-700 px-6 py-4 font-semibold text-white transition hover:bg-brand-800 disabled:bg-gray-400"
           >
             {saving ? "Saving..." : "Continue"}
           </button>

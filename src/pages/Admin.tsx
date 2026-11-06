@@ -18,6 +18,7 @@ import { useCharityStore } from "../store/useCharityStore"
 import type { FoodDonation } from "../types"
 import { formatTime } from "../utils/donationStatus"
 import { riskLevel } from "../utils/riskScore"
+import FoodImage from "../components/FoodImage"
 
 // Listings the AI screening held back, plus live ones it marked as risky
 function FlaggedQueue({ donations }: { donations: FoodDonation[] }) {
@@ -65,7 +66,7 @@ function FlaggedQueue({ donations }: { donations: FoodDonation[] }) {
         <div className="mt-6 space-y-4">
           {queue.map((d) => (
             <div key={d.id} className="flex flex-col gap-4 rounded-2xl border p-4 md:flex-row">
-              <img src={d.image} alt={d.title} className="h-32 w-full rounded-xl object-cover md:w-44" />
+              <FoodImage donation={d} className="h-32 w-full rounded-xl  md:w-44" />
               <div className="flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="font-semibold">{d.title}</h3>
@@ -98,7 +99,7 @@ function FlaggedQueue({ donations }: { donations: FoodDonation[] }) {
                     type="button"
                     disabled={busyId === d.id || !user}
                     onClick={() => user && act(d.id, () => approveDonation(d.id, user.uid))}
-                    className="flex-1 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:bg-gray-400 md:flex-none"
+                    className="flex-1 rounded-full bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:bg-gray-400 md:flex-none"
                   >
                     Approve
                   </button>
@@ -161,7 +162,7 @@ function DemoDataPanel({ donations }: { donations: FoodDonation[] }) {
           onClick={() =>
             user && run(async () => `Loaded ${await loadDemoData({ uid: user.uid, email: user.email ?? "" })} demo listings.`)
           }
-          className="rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:bg-gray-300"
+          className="rounded-full bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:bg-gray-300"
         >
           Load demo data
         </button>
@@ -208,7 +209,7 @@ function Admin() {
       <section className="border-b bg-white">
         <div className="mx-auto max-w-7xl px-6 py-16">
 
-          <p className="text-sm font-semibold uppercase tracking-widest">
+          <p className="text-sm font-semibold uppercase tracking-widest text-brand-700">
             Administration
           </p>
 
@@ -232,7 +233,7 @@ function Admin() {
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
 
           {/* Total */}
-          <div className="rounded-3xl border bg-white p-6">
+          <div className="rounded-3xl border bg-white shadow-card p-6">
 
             <div className="flex items-center justify-between">
 
@@ -255,7 +256,7 @@ function Admin() {
           </div>
 
           {/* Available */}
-          <div className="rounded-3xl border bg-white p-6">
+          <div className="rounded-3xl border bg-white shadow-card p-6">
 
             <div className="flex items-center justify-between">
 
@@ -278,7 +279,7 @@ function Admin() {
           </div>
 
           {/* Claimed */}
-          <div className="rounded-3xl border bg-white p-6">
+          <div className="rounded-3xl border bg-white shadow-card p-6">
 
             <div className="flex items-center justify-between">
 
@@ -301,7 +302,7 @@ function Admin() {
           </div>
 
           {/* Completed */}
-          <div className="rounded-3xl border bg-white p-6">
+          <div className="rounded-3xl border bg-white shadow-card p-6">
 
             <div className="flex items-center justify-between">
 
@@ -330,7 +331,7 @@ function Admin() {
         <ImpactCharts donations={donations} />
 
         {/* Donations Table */}
-        <div className="mt-10 rounded-3xl border bg-white p-6 md:p-8">
+        <div className="mt-10 rounded-3xl border bg-white shadow-card p-6 md:p-8">
 
           <div className="mb-6">
 

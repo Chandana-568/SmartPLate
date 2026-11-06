@@ -48,12 +48,12 @@ function StatusTimeline({ donation, variant = "full" }: StatusTimelineProps) {
               <div
                 title={step.label}
                 className={`h-3 w-3 shrink-0 rounded-full ${
-                  index <= current ? "bg-black" : "bg-gray-200"
+                  index <= current ? "bg-brand-700" : "bg-gray-200"
                 }`}
               />
               {index < steps.length - 1 && (
                 <div
-                  className={`h-1 flex-1 ${index < current ? "bg-black" : "bg-gray-200"}`}
+                  className={`h-1 flex-1 ${index < current ? "bg-brand-700" : "bg-gray-200"}`}
                 />
               )}
             </div>
@@ -77,9 +77,9 @@ function StatusTimeline({ donation, variant = "full" }: StatusTimelineProps) {
             <div
               className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${
                 done
-                  ? "border-black bg-black text-white"
+                  ? "border-brand-700 bg-brand-700 text-white"
                   : active
-                    ? "border-black bg-white"
+                    ? "border-brand-700 bg-white"
                     : "border-gray-200 bg-white"
               }`}
             >

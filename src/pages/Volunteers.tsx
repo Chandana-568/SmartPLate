@@ -49,7 +49,7 @@ function Volunteers() {
     <main className="min-h-screen bg-gray-50">
       <section className="border-b bg-white">
         <div className="mx-auto max-w-7xl px-6 py-20">
-          <p className="text-sm font-semibold uppercase tracking-widest">Volunteer</p>
+          <p className="text-sm font-semibold uppercase tracking-widest text-brand-700">Volunteer</p>
           <h1 className="mt-4 max-w-3xl text-4xl font-bold md:text-6xl">
             Be the bridge between surplus food and an empty plate.
           </h1>
@@ -75,7 +75,7 @@ function Volunteers() {
           {cta && (
             <Link
               to={cta.to}
-              className="mt-10 inline-flex items-center gap-2 rounded-full bg-black px-7 py-4 font-semibold text-white transition hover:bg-gray-800"
+              className="mt-10 inline-flex items-center gap-2 rounded-full bg-brand-700 px-7 py-4 font-semibold text-white transition hover:bg-brand-800"
             >
               {cta.label} <ArrowRight className="h-5 w-5" />
             </Link>
@@ -87,7 +87,7 @@ function Volunteers() {
         <h2 className="text-3xl font-bold">How a delivery works</h2>
         <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {STEPS.map(({ icon: Icon, title, text }, index) => (
-            <div key={title} className="rounded-3xl border bg-white p-6">
+            <div key={title} className="rounded-3xl border bg-white shadow-card p-6">
               <div className="flex items-center justify-between">
                 <Icon className="h-8 w-8" />
                 <span className="text-sm font-semibold text-gray-400">0{index + 1}</span>

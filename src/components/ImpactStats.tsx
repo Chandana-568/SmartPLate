@@ -1,3 +1,5 @@
+import { Cloud, HandPlatter, Scale, Store } from "lucide-react"
+
 import { useCharityStore } from "../store/useCharityStore"
 import { computeImpact, formatNumber } from "../utils/impact"
 
@@ -9,31 +11,29 @@ function ImpactStats() {
   const impact = computeImpact(donations)
 
   const stats = [
-    { value: formatNumber(impact.meals), label: "Meals Rescued" },
-    { value: `${formatNumber(impact.kgSaved)} kg`, label: "Food Saved from Waste" },
-    { value: `${formatNumber(impact.co2Kg)} kg`, label: "CO₂ Emissions Avoided" },
-    { value: formatNumber(impact.donors), label: "Food Donors" },
+    { value: formatNumber(impact.meals), label: "Meals rescued", icon: HandPlatter, tint: "bg-brand-50 text-brand-700" },
+    { value: `${formatNumber(impact.kgSaved + impact.recycledKg)} kg`, label: "Food kept from landfill", icon: Scale, tint: "bg-saffron-50 text-saffron-600" },
+    { value: `${formatNumber(impact.co2Kg)} kg`, label: "CO₂e avoided", icon: Cloud, tint: "bg-sky-50 text-sky-700" },
+    { value: formatNumber(impact.donors), label: "Food donors", icon: Store, tint: "bg-rose-50 text-rose-700" },
   ]
 
   return (
-    <section className="border-y">
-      <div className="mx-auto grid max-w-7xl grid-cols-2 md:grid-cols-4">
-        {stats.map((stat) => (
-          <div
-            key={stat.label}
-            className="px-6 py-10 text-center"
-          >
-            <h2 className="text-3xl font-bold md:text-4xl">
-              {loading ? "—" : stat.value}
-            </h2>
-
-            <p className="mt-2 text-sm text-gray-500">
-              {stat.label}
-            </p>
-          </div>
-        ))}
+    <section className="mx-auto max-w-7xl px-6">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        {stats.map((stat) => {
+          const Icon = stat.icon
+          return (
+            <div key={stat.label} className="rounded-3xl border bg-white p-6 shadow-card">
+              <span className={`flex h-11 w-11 items-center justify-center rounded-2xl ${stat.tint}`}>
+                <Icon className="h-5 w-5" />
+              </span>
+              <p className="mt-4 text-3xl font-extrabold tabular-nums md:text-4xl">{loading ? "—" : stat.value}</p>
+              <p className="mt-1 text-sm text-gray-500">{stat.label}</p>
+            </div>
+          )
+        })}
       </div>
-      <p className="pb-4 text-center text-xs text-gray-400">
+      <p className="mt-3 text-center text-xs text-gray-400">
         Live from SharePlate deliveries · 1 meal ≈ 0.4 kg food ≈ 1 kg CO₂e
       </p>
     </section>

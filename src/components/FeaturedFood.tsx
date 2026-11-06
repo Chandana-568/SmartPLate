@@ -17,7 +17,7 @@ function FeaturedFood() {
     .slice(0, 3)
 
   return (
-    <section className="bg-gray-50 px-6 py-24">
+    <section className="bg-gradient-to-b from-white to-gray-50 px-6 py-24">
 
       <div className="mx-auto max-w-7xl">
 
@@ -25,7 +25,7 @@ function FeaturedFood() {
         <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
 
           <div className="max-w-2xl">
-            <p className="text-sm font-semibold uppercase tracking-widest">
+            <p className="text-sm font-semibold uppercase tracking-widest text-brand-700">
               Food rescue
             </p>
 
@@ -41,7 +41,7 @@ function FeaturedFood() {
 
           <Link
             to="/food"
-            className="flex items-center gap-2 font-semibold"
+            className="flex items-center gap-2 font-semibold text-brand-700 hover:text-brand-800"
           >
             View all food
             <ArrowRight className="h-5 w-5" />

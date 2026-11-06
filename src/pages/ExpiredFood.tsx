@@ -17,6 +17,7 @@ import {
   RECYCLER_TYPES,
   suitableFor,
 } from "../utils/recycle"
+import FoodImage from "../components/FoodImage"
 
 function ago(ms: number) {
   const min = Math.max(1, Math.round(ms / 60000))
@@ -92,9 +93,9 @@ function ExpiredFood() {
         : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(d.location)}`
 
     return (
-      <div key={d.id} className="overflow-hidden rounded-3xl border bg-white">
+      <div key={d.id} className="overflow-hidden rounded-3xl border bg-white shadow-card">
         <div className="relative">
-          <img src={d.image} alt={d.title} className="h-40 w-full object-cover grayscale-[45%]" />
+          <FoodImage donation={d} className="h-40 w-full  grayscale-[45%]" />
           <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-gray-900 px-3 py-1 text-xs font-bold uppercase text-white">
             <TimerOff className="h-3.5 w-3.5" /> Expired {ago(now - expiryMs(d))}
           </span>
@@ -146,7 +147,7 @@ function ExpiredFood() {
                   type="button"
                   disabled={busyId === d.id}
                   onClick={() => run(d.id, () => claimForRecycling(d.id, { ...profile, recyclerType: myType }))}
-                  className="mt-3 w-full rounded-full bg-black px-5 py-3 font-semibold text-white transition hover:bg-gray-800 disabled:bg-gray-400"
+                  className="mt-3 w-full rounded-full bg-brand-700 px-5 py-3 font-semibold text-white transition hover:bg-brand-800 disabled:bg-gray-400"
                 >
                   {busyId === d.id ? "Claiming..." : `Pick up for ${RECYCLER_TYPES[myType].use}`}
                 </button>
@@ -171,7 +172,7 @@ function ExpiredFood() {
                 Expired food isn't safe for people. Only poultry farms, compost units and biogas plants can collect it.
               </p>
               {!user && (
-                <Link to="/signup" className="mt-2 inline-block font-semibold text-black underline">
+                <Link to="/signup" className="mt-2 inline-block font-semibold text-brand-800 underline">
                   Run a poultry farm, compost or biogas unit? Sign up
                 </Link>
               )}
@@ -186,7 +187,7 @@ function ExpiredFood() {
     <main className="min-h-screen bg-gray-50">
       <section className="border-b bg-white">
         <div className="mx-auto max-w-7xl px-6 py-14">
-          <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-widest">
+          <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-brand-700">
             <TimerOff className="h-4 w-4" /> Expired
           </p>
           <h1 className="mt-4 text-4xl font-bold md:text-5xl">
@@ -238,7 +239,7 @@ function ExpiredFood() {
                 <div className="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                   {mine.map((d) =>
                     d.recycle?.status === "collected" ? (
-                      <div key={d.id} className="flex items-center gap-3 rounded-3xl border bg-white p-5">
+                      <div key={d.id} className="flex items-center gap-3 rounded-3xl border bg-white shadow-card p-5">
                         <CheckCircle2 className="h-6 w-6 shrink-0 text-green-600" />
                         <div>
                           <p className="font-semibold">{d.title}</p>
@@ -260,7 +261,7 @@ function ExpiredFood() {
               <span className="text-base font-medium text-gray-400">({others.length})</span>
             </h2>
             {others.length === 0 ? (
-              <div className="mt-6 rounded-3xl border bg-white px-6 py-16 text-center">
+              <div className="mt-6 rounded-3xl border bg-white shadow-card px-6 py-16 text-center">
                 <p className="text-3xl">🎉</p>
                 <p className="mt-3 text-gray-500">No expired food right now. People got it first.</p>
               </div>

@@ -116,7 +116,7 @@ function Signup() {
         {/* Header */}
         <div className="text-center">
 
-          <p className="text-sm font-semibold uppercase tracking-widest">
+          <p className="text-sm font-semibold uppercase tracking-widest text-brand-700">
             Join SharePlate
           </p>
 
@@ -134,7 +134,7 @@ function Signup() {
         {/* Form */}
         <form
           onSubmit={handleSubmit}
-          className="mt-10 rounded-3xl border bg-white p-8"
+          className="mt-10 rounded-3xl border bg-white shadow-card p-8"
         >
 
           {/* Role */}
@@ -169,7 +169,7 @@ function Signup() {
                 placeholder={
                   role === "ngo" ? "e.g. Hope Ashram" : "e.g. Green Leaf Restaurant"
                 }
-                className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
+                className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
               />
             </div>
           )}
@@ -184,7 +184,7 @@ function Signup() {
               value={phone}
               onChange={(event) => setPhone(event.target.value)}
               placeholder="+91 98765 43210"
-              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
+              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
             />
           </div>
 
@@ -202,7 +202,7 @@ function Signup() {
                 setName(event.target.value)
               }
               placeholder="Enter your name"
-              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
+              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
             />
 
           </div>
@@ -221,7 +221,7 @@ function Signup() {
                 setEmail(event.target.value)
               }
               placeholder="you@example.com"
-              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
+              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
             />
 
           </div>
@@ -240,7 +240,7 @@ function Signup() {
                 setPassword(event.target.value)
               }
               placeholder="At least 6 characters"
-              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
+              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
             />
 
           </div>
@@ -259,7 +259,7 @@ function Signup() {
                 setConfirmPassword(event.target.value)
               }
               placeholder="Confirm your password"
-              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
+              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
             />
 
           </div>
@@ -275,7 +275,7 @@ function Signup() {
           <button
             type="submit"
             disabled={loading}
-            className="mt-6 w-full rounded-full bg-black px-6 py-4 font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-400"
+            className="mt-6 w-full rounded-full bg-brand-700 px-6 py-4 font-semibold text-white transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:bg-gray-400"
           >
             {loading
               ? "Creating Account..."
@@ -289,7 +289,7 @@ function Signup() {
 
             <Link
               to="/login"
-              className="font-semibold text-black hover:underline"
+              className="font-semibold text-brand-800 hover:underline"
             >
               Login
             </Link>

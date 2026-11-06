@@ -18,6 +18,7 @@ import {
   formatTime,
   isExpired,
 } from "../utils/donationStatus"
+import FoodImage from "../components/FoodImage"
 
 // Badge text + colour for a donation, from the donor's point of view
 function badgeFor(donation: FoodDonation) {
@@ -112,7 +113,7 @@ function PickupCode({ donation }: { donation: FoodDonation }) {
 
   return (
     <>
-      <div className="mt-5 rounded-2xl border-2 border-dashed border-black px-4 py-3">
+      <div className="mt-5 rounded-2xl border-2 border-dashed border-brand-700 px-4 py-3">
         <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-gray-500">
           <KeyRound className="h-4 w-4" /> Pickup code
         </p>
@@ -179,7 +180,7 @@ function MyDonations() {
         {/* Header */}
         <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-widest">
+            <p className="text-sm font-semibold uppercase tracking-widest text-brand-700">
               Your Contributions
             </p>
             <h1 className="mt-4 text-4xl font-bold md:text-5xl">My Donations</h1>
@@ -190,7 +191,7 @@ function MyDonations() {
           </div>
           <Link
             to="/donate"
-            className="self-start rounded-full bg-black px-6 py-3 font-semibold text-white transition hover:bg-gray-800 md:self-auto"
+            className="self-start rounded-full bg-brand-700 px-6 py-3 font-semibold text-white transition hover:bg-brand-800 md:self-auto"
           >
             + Donate Food
           </Link>
@@ -203,7 +204,7 @@ function MyDonations() {
         )}
 
         {!error && donations.length === 0 && (
-          <div className="mt-12 rounded-3xl border bg-white px-6 py-16 text-center">
+          <div className="mt-12 rounded-3xl border bg-white shadow-card px-6 py-16 text-center">
             <h2 className="text-2xl font-bold">You haven't donated any food yet.</h2>
             <p className="mt-3 text-gray-500">Your donated food will appear here.</p>
           </div>
@@ -219,12 +220,8 @@ function MyDonations() {
                 (donation.status === "available" || donation.status === "under_review") && !donation.recycle
 
               return (
-                <div key={donation.id} className="overflow-hidden rounded-3xl border bg-white">
-                  <img
-                    src={donation.image}
-                    alt={donation.title}
-                    className="h-44 w-full object-cover"
-                  />
+                <div key={donation.id} className="overflow-hidden rounded-3xl border bg-white shadow-card">
+                  <FoodImage donation={donation} className="h-44 w-full" />
 
                   <div className="p-6">
                     <div className="flex items-start justify-between gap-4">

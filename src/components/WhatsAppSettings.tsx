@@ -130,7 +130,7 @@ function WhatsAppSettings({ profile }: { profile: UserProfile }) {
         value={phone}
         onChange={(event) => setPhone(event.target.value)}
         placeholder="+91 98765 43210"
-        className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
+        className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
       />
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -162,7 +162,7 @@ function WhatsAppSettings({ profile }: { profile: UserProfile }) {
         <button
           type="submit"
           disabled={saving}
-          className="rounded-full bg-black px-6 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:bg-gray-400"
+          className="rounded-full bg-brand-700 px-6 py-3 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:bg-gray-400"
         >
           {saving ? "Saving..." : "Save"}
         </button>

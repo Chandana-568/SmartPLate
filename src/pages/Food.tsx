@@ -190,7 +190,7 @@ function Food() {
       <section className="border-b bg-white">
         <div className="mx-auto max-w-7xl px-6 py-16">
 
-          <p className="text-sm font-semibold uppercase tracking-widest">
+          <p className="text-sm font-semibold uppercase tracking-widest text-brand-700">
             Food Rescue
           </p>
 
@@ -229,7 +229,7 @@ function Food() {
             placeholder="Search by food, location..."
             className="w-full rounded-full border bg-white
             py-4 pl-12 pr-5 outline-none transition
-            focus:ring-2"
+            focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
           />
 
         </div>
@@ -379,7 +379,7 @@ function Food() {
 
           {loading ? (
 
-            <div className="rounded-3xl border bg-white px-6 py-16 text-center">
+            <div className="rounded-3xl border bg-white shadow-card px-6 py-16 text-center">
 
               <p className="text-gray-500">
                 Loading available food...
@@ -405,7 +405,7 @@ function Food() {
 
           ) : (
 
-            <div className="rounded-3xl border bg-white px-6 py-16 text-center">
+            <div className="rounded-3xl border bg-white shadow-card px-6 py-16 text-center">
 
               <h3 className="text-xl font-bold">
                 No food found nearby

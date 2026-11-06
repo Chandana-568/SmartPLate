@@ -15,6 +15,7 @@ import {
 import { db } from "../firebase"
 import type { FoodAnalysis, FoodDonation } from "../types"
 import { generatePickupCode } from "../utils/donationStatus"
+import { dishPhoto } from "../utils/foodImages"
 
 const IMG = (id: string) => `https://images.unsplash.com/photo-${id}?w=800&q=70&fm=jpg`
 const IMAGES = [
@@ -121,7 +122,7 @@ export function buildDemoDonations(admin: { uid: string; email: string }, now = 
       donorName: DONORS[i % DONORS.length],
       donorId: admin.uid,
       donorEmail: admin.email,
-      image: IMG(IMAGES[i % IMAGES.length]),
+      image: dishPhoto(food.title, `${food.title}-${servings}`),
       rescuedBy: hasNgo ? `seed-ngo-${i % NGOS.length}` : null,
       ...(hasNgo ? { rescuedByName: ngo, claimedAt: createdAt + 15 * MIN } : {}),
       volunteerId: hasVolunteer ? `seed-volunteer-${i % VOLUNTEERS.length}` : null,
@@ -201,7 +202,7 @@ export function buildDemoDonations(admin: { uid: string; email: string }, now = 
       donorName: DONORS[(k + 2) % DONORS.length],
       donorId: admin.uid,
       donorEmail: admin.email,
-      image: IMG(IMAGES[(k + 5) % IMAGES.length]),
+      image: dishPhoto(food.title, `${food.title}-${servings}`),
       rescuedBy: null,
       volunteerId: null,
       aiAnalysis: analysisFor(food, servings),

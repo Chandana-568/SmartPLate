@@ -44,12 +44,12 @@ function MyPhoneBanner({ why }: { why: string }) {
           value={phone}
           onChange={(event) => setPhone(event.target.value)}
           placeholder="+91 98765 43210"
-          className="flex-1 rounded-xl border bg-white px-3 py-2 text-sm outline-none focus:ring-2"
+          className="flex-1 rounded-xl border bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
         />
         <button
           type="submit"
           disabled={saving}
-          className="rounded-full bg-black px-5 py-2 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:bg-gray-400"
+          className="rounded-full bg-brand-700 px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:bg-gray-400"
         >
           {saving ? "Saving..." : "Save"}
         </button>

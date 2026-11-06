@@ -4,6 +4,7 @@ import type { FoodDonation } from "../types"
 import { formatTime } from "../utils/donationStatus"
 import { riskLevel } from "../utils/riskScore"
 import CountdownTimer from "./CountdownTimer"
+import FoodImage from "./FoodImage"
 
 interface FoodCardProps {
   donation: FoodDonation
@@ -25,23 +26,11 @@ function FoodCard({ donation, distance }: FoodCardProps) {
   }
 
   return (
-    <div className="group overflow-hidden rounded-3xl border bg-white transition duration-300 hover:-translate-y-2 hover:shadow-xl">
+    <div className="group overflow-hidden rounded-3xl border bg-white shadow-card transition duration-300 hover:-translate-y-2 hover:shadow-xl">
 
       {/* Image */}
       <div className="relative h-56 overflow-hidden">
-        <img
-          src={donation.image}
-          alt={donation.title}
-          onError={(event) => {
-            // Broken or deleted photo: show a neutral food picture instead
-            const img = event.currentTarget
-            if (!img.dataset.fallback) {
-              img.dataset.fallback = "1"
-              img.src = "https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=800&q=70&fm=jpg"
-            }
-          }}
-          className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-        />
+        <FoodImage donation={donation} className="h-full w-full  transition duration-500 group-hover:scale-105" />
 
         {/* AI screening badge */}
         {donation.aiAnalysis && (
@@ -139,7 +128,7 @@ function FoodCard({ donation, distance }: FoodCardProps) {
         {/* View Details */}
         <Link
           to={`/food/${donation.id}`}
-          className="mt-3 block w-full rounded-full bg-black px-5 py-3 text-center font-semibold text-white transition hover:bg-gray-800"
+          className="mt-3 block w-full rounded-full bg-brand-700 px-5 py-3 text-center font-semibold text-white transition hover:bg-brand-800"
         >
           View Details
         </Link>

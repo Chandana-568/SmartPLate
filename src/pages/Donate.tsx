@@ -244,14 +244,14 @@ function Donate() {
       <div className="mx-auto max-w-3xl">
         {/* Header */}
         <div>
-          <p className="text-sm font-semibold uppercase tracking-widest">Give Back</p>
+          <p className="text-sm font-semibold uppercase tracking-widest text-brand-700">Give Back</p>
           <h1 className="mt-4 text-4xl font-bold md:text-5xl">Donate surplus food.</h1>
           <p className="mt-4 text-lg leading-8 text-gray-600">
             Snap a photo and our AI fills in the details for you.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-12 rounded-3xl border bg-white p-8 md:p-10">
+        <form onSubmit={handleSubmit} className="mt-12 rounded-3xl border bg-white shadow-card p-8 md:p-10">
           {/* Photo + AI */}
           <div>
             <label className="flex items-center gap-2 text-sm font-semibold">
@@ -271,7 +271,7 @@ function Donate() {
               <button
                 type="button"
                 onClick={() => fileInput.current?.click()}
-                className="mt-2 flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-6 py-10 text-gray-500 transition hover:border-black hover:text-black"
+                className="mt-2 flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-6 py-10 text-gray-500 transition hover:border-brand-700 hover:text-brand-800"
               >
                 <Camera className="h-8 w-8" />
                 <span className="font-semibold">Take or upload a photo</span>
@@ -290,7 +290,7 @@ function Donate() {
                     <X className="h-4 w-4" />
                   </button>
                   {aiStatus === "analyzing" && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-white">
+                    <div className="absolute inset-0 flex items-center justify-center bg-brand-700/40 text-white">
                       <Loader2 className="mr-2 h-5 w-5 animate-spin" /> AI is analysing your food...
                     </div>
                   )}
@@ -317,7 +317,7 @@ function Donate() {
                   <button
                     type="button"
                     onClick={() => fileInput.current?.click()}
-                    className="mt-3 text-sm font-semibold text-gray-600 hover:text-black"
+                    className="mt-3 text-sm font-semibold text-gray-600 hover:text-brand-800"
                   >
                     Change photo
                   </button>
@@ -334,7 +334,7 @@ function Donate() {
               value={title}
               onChange={(event) => setTitle(event.target.value)}
               placeholder="Example: 40 Meal Boxes"
-              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
+              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
             />
           </div>
 
@@ -346,7 +346,7 @@ function Donate() {
               onChange={(event) => setDescription(event.target.value)}
               placeholder="Describe the food..."
               rows={4}
-              className="mt-2 w-full resize-none rounded-xl border px-4 py-3 outline-none focus:ring-2"
+              className="mt-2 w-full resize-none rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
             />
           </div>
 
@@ -372,7 +372,7 @@ function Donate() {
                 value={quantity}
                 onChange={(event) => setQuantity(event.target.value)}
                 placeholder="Example: 40"
-                className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
+                className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
               />
             </div>
           </div>
@@ -385,7 +385,7 @@ function Donate() {
               value={phone}
               onChange={(event) => setPhoneInput(event.target.value)}
               placeholder="+91 98765 43210"
-              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
+              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
             />
             <p className="mt-1 text-xs text-gray-500">
               Only the NGO or volunteer collecting your food sees it, to call you or get your pickup code by SMS.
@@ -400,7 +400,7 @@ function Donate() {
               value={location}
               onChange={(event) => setLocation(event.target.value)}
               placeholder="Example: Vijayanagar, Mysuru"
-              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
+              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
             />
             <button
               type="button"
@@ -438,7 +438,7 @@ function Donate() {
               value={pickupBefore}
               max={maxPickup}
               onChange={(event) => setPickupBefore(event.target.value)}
-              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
+              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
             />
             {analysis && (
               <p className="mt-2 text-xs text-gray-500">
@@ -460,7 +460,7 @@ function Donate() {
           <button
             type="submit"
             disabled={loading || aiStatus === "analyzing"}
-            className="mt-8 w-full rounded-full bg-black px-6 py-4 font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-400"
+            className="mt-8 w-full rounded-full bg-brand-700 px-6 py-4 font-semibold text-white transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:bg-gray-400"
           >
             {loading ? "Saving Donation..." : aiStatus === "analyzing" ? "Waiting for AI..." : "Donate Food"}
           </button>

@@ -2,6 +2,8 @@ import { KeyRound } from "lucide-react"
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 
+import ContactBox from "../components/ContactBox"
+import MyPhoneBanner from "../components/MyPhoneBanner"
 import StatusTimeline from "../components/StatusTimeline"
 import { useAuth } from "../context/auth"
 import {
@@ -45,14 +47,55 @@ function badgeFor(donation: FoodDonation) {
   }
 }
 
+// Call / SMS the NGO and the volunteer. The SMS to whoever collects the
+// food carries the pickup code, so the donor can send it in one tap.
+function DeliveryContacts({ donation, code }: { donation: FoodDonation; code?: string | null }) {
+  const collectorIsVolunteer = Boolean(donation.volunteerId)
+  const codeSms = (name: string) =>
+    code
+      ? `Hi ${name}, your SharePlate pickup code for "${donation.title}" is ${code}. ` +
+        `Show it to me when you collect the food at ${donation.location}.`
+      : `Hi ${name}, this is ${donation.donorName} about "${donation.title}" on SharePlate. ` +
+        `Pickup is at ${donation.location}.`
+  const plainSms = (name: string) =>
+    `Hi ${name}, this is ${donation.donorName} about "${donation.title}" on SharePlate.`
+  const demo = Boolean(donation.seed)
+  const canSendCode = donation.status === "claimed" && Boolean(code)
+
+  return (
+    <>
+      {donation.rescuedBy && (
+        <ContactBox
+          uid={donation.rescuedBy}
+          name={donation.rescuedByName || "NGO"}
+          label={collectorIsVolunteer ? "Receiving NGO" : "Receiving NGO (collecting it)"}
+          demo={demo}
+          sms={!collectorIsVolunteer ? codeSms(donation.rescuedByName || "there") : plainSms(donation.rescuedByName || "there")}
+          smsLabel={!collectorIsVolunteer && canSendCode ? "SMS code" : "SMS"}
+        />
+      )}
+      {donation.volunteerId && (
+        <ContactBox
+          uid={donation.volunteerId}
+          name={donation.volunteerName || "Volunteer"}
+          label="Volunteer collecting it"
+          demo={demo}
+          sms={codeSms(donation.volunteerName || "there")}
+          smsLabel={canSendCode ? "SMS code" : "SMS"}
+        />
+      )}
+    </>
+  )
+}
+
 // The secret code the donor tells the volunteer at handover.
 // Only fetched once someone has claimed the food.
-function PickupCode({ donationId }: { donationId: string }) {
+function PickupCode({ donation }: { donation: FoodDonation }) {
   const [code, setCode] = useState<string | null | undefined>(undefined)
 
   useEffect(() => {
     let active = true
-    getPickupCode(donationId)
+    getPickupCode(donation.id)
       .then((value) => active && setCode(value))
       .catch((error) => {
         console.error("Pickup code error:", error)
@@ -61,28 +104,31 @@ function PickupCode({ donationId }: { donationId: string }) {
     return () => {
       active = false
     }
-  }, [donationId])
+  }, [donation.id])
 
   if (code === undefined) return null
 
   return (
-    <div className="mt-5 rounded-2xl border-2 border-dashed border-black px-4 py-3">
-      <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-gray-500">
-        <KeyRound className="h-4 w-4" /> Pickup code
-      </p>
-      {code ? (
-        <>
-          <p className="mt-1 text-3xl font-bold tracking-[0.4em]">{code}</p>
-          <p className="mt-1 text-xs text-gray-500">
-            Share it only with the volunteer when they collect the food.
-          </p>
-        </>
-      ) : (
-        <p className="mt-1 text-sm text-gray-500">
-          This older donation has no code. The volunteer can enter any 4 digits.
+    <>
+      <div className="mt-5 rounded-2xl border-2 border-dashed border-black px-4 py-3">
+        <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-gray-500">
+          <KeyRound className="h-4 w-4" /> Pickup code
         </p>
-      )}
-    </div>
+        {code ? (
+          <>
+            <p className="mt-1 text-3xl font-bold tracking-[0.4em]">{code}</p>
+            <p className="mt-1 text-xs text-gray-500">
+              Share it only with the person collecting the food: tell them, or tap "SMS code" below.
+            </p>
+          </>
+        ) : (
+          <p className="mt-1 text-sm text-gray-500">
+            This older donation has no code. The volunteer can enter any 4 digits.
+          </p>
+        )}
+      </div>
+      <DeliveryContacts donation={donation} code={code} />
+    </>
   )
 }
 
@@ -138,6 +184,7 @@ function MyDonations() {
             <p className="mt-4 max-w-2xl text-lg text-gray-600">
               Track the food you shared, live, from posting to delivery.
             </p>
+            <MyPhoneBanner why="NGOs and volunteers use it to call you when they come to collect your food." />
           </div>
           <Link
             to="/donate"
@@ -203,7 +250,8 @@ function MyDonations() {
                       </p>
                     )}
 
-                    {showCode && <PickupCode donationId={donation.id} />}
+                    {showCode && <PickupCode donation={donation} />}
+                    {donation.status === "picked-up" && <DeliveryContacts donation={donation} />}
 
                     {/* Expired: where the food goes instead of the bin */}
                     {donation.recycle ? (

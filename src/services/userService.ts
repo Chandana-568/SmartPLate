@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc } from "firebase/firestore"
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore"
 import type { User } from "firebase/auth"
 
 import { db } from "../firebase"
@@ -52,3 +52,10 @@ export async function getContact(uid: string) {
   const data = snap.exists() ? (snap.data() as Partial<UserProfile>) : {}
   return { phone: data.phone ?? "", email: data.email ?? "" }
 }
+
+// Save your own phone so the other side of a pickup can call / SMS you
+export async function saveMyPhone(uid: string, phone: string) {
+  await updateDoc(doc(db, "users", uid), { phone: phone.trim() })
+}
+
+export const isValidPhone = (phone: string) => phone.replace(/\D/g, "").length >= 10

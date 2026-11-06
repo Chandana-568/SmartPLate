@@ -8,6 +8,7 @@ import { MAX_PICKUP_HOURS, useNow } from "../hooks/useNow"
 import { useAuth } from "../context/auth"
 import { AiUnavailableError, analyzeFoodPhoto } from "../services/aiService"
 import { addDonationToFirestore } from "../services/donationService"
+import { isValidPhone, saveMyPhone } from "../services/userService"
 import { useCharityStore } from "../store/useCharityStore"
 import type { FoodAnalysis } from "../types"
 import { compressImage, hashImage, type CompressedImage } from "../utils/image"
@@ -37,6 +38,10 @@ function Donate() {
   const [foodType, setFoodType] = useState("Vegetarian")
   const [quantity, setQuantity] = useState("")
   const [location, setLocation] = useState("")
+  // Contact number: saved to your profile (never on the public listing),
+  // so only the NGO / volunteer collecting your food can call or SMS you
+  const [phoneInput, setPhoneInput] = useState<string | null>(null)
+  const phone = phoneInput ?? profile?.phone ?? ""
   const [pickupBefore, setPickupBefore] = useState("")
 
   const [photo, setPhoto] = useState<CompressedImage | null>(null)
@@ -177,6 +182,11 @@ function Donate() {
       return
     }
 
+    if (!isValidPhone(phone)) {
+      setError("Add a 10-digit contact number so the NGO or volunteer can reach you.")
+      return
+    }
+
     // Spam / safety screening: AI signals + behaviour rules
     const risk = calculateRisk({
       title,
@@ -195,6 +205,7 @@ function Donate() {
     setLoading(true)
 
     try {
+      if (phone.trim() !== (profile?.phone ?? "").trim()) await saveMyPhone(user.uid, phone)
       await addDonationToFirestore(
         {
           title: title.trim(),
@@ -364,6 +375,21 @@ function Donate() {
                 className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
               />
             </div>
+          </div>
+
+          {/* Contact number */}
+          <div className="mt-6">
+            <label className="text-sm font-semibold">Contact number *</label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(event) => setPhoneInput(event.target.value)}
+              placeholder="+91 98765 43210"
+              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Only the NGO or volunteer collecting your food sees it, to call you or get your pickup code by SMS.
+            </p>
           </div>
 
           {/* Location */}

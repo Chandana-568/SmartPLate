@@ -2,6 +2,8 @@ import { ArrowRight, Clock, MapPin, Navigation, Phone, Users } from "lucide-reac
 import { useState } from "react"
 import { Link } from "react-router-dom"
 
+import ContactBox from "../components/ContactBox"
+import MyPhoneBanner from "../components/MyPhoneBanner"
 import StatusTimeline from "../components/StatusTimeline"
 import WhatsAppSettings from "../components/WhatsAppSettings"
 import { useAuth } from "../context/auth"
@@ -36,6 +38,7 @@ function RescueCard({
   onPickup: (donation: FoodDonation, code: string) => Promise<void>
   onComplete: Action
 }) {
+  const { profile } = useAuth()
   const [code, setCode] = useState("")
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
@@ -139,6 +142,50 @@ function RescueCard({
             On the way to {donation.rescuedByName}.
           </p>
         )}
+
+        {/* Contacts: only the people actually doing this pickup */}
+        {(() => {
+          const active = (donation.status === "claimed" && !expiredBeforePickup) || donation.status === "picked-up"
+          if (!active) return null
+          const demo = Boolean(donation.seed)
+          const me = profile?.orgName || profile?.name || "a SharePlate volunteer"
+          const collecting = mine || (myClaim && unassigned) || isAdmin
+          return (
+            <>
+              {donation.status === "claimed" && collecting && (
+                <ContactBox
+                  uid={donation.donorId}
+                  name={donation.donorName}
+                  label="Donor"
+                  demo={demo}
+                  smsLabel="Ask for code"
+                  sms={
+                    `Hi ${donation.donorName}, I'm ${me} from SharePlate, coming to collect "${donation.title}". ` +
+                    `Please SMS me the 4-digit pickup code.`
+                  }
+                />
+              )}
+              {(myClaim || isAdmin) && donation.volunteerId && !mine && (
+                <ContactBox
+                  uid={donation.volunteerId}
+                  name={donation.volunteerName || "Volunteer"}
+                  label="Volunteer delivering it"
+                  demo={demo}
+                  sms={`Hi ${donation.volunteerName || "there"}, this is ${me} about "${donation.title}" on SharePlate.`}
+                />
+              )}
+              {mine && donation.rescuedBy && !myClaim && (
+                <ContactBox
+                  uid={donation.rescuedBy}
+                  name={donation.rescuedByName || "NGO"}
+                  label="Deliver to (NGO)"
+                  demo={demo}
+                  sms={`Hi ${donation.rescuedByName || "there"}, I'm ${me}, delivering "${donation.title}" from SharePlate.`}
+                />
+              )}
+            </>
+          )
+        })()}
 
         {/* Actions */}
         {canAccept && (
@@ -320,6 +367,7 @@ function MyRescues() {
           </p>
 
           {role === "ngo" && <WhatsAppSettings profile={profile} />}
+          <MyPhoneBanner why="Donors use it to SMS you the pickup code and to call you at handover." />
         </div>
       </section>
 

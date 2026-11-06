@@ -4,14 +4,16 @@ import { Link } from "react-router-dom"
 import FoodCard from "./FoodCard"
 import { useCharityStore } from "../store/useCharityStore"
 import { isOpenForClaim } from "../utils/donationStatus"
+import { useNow } from "../hooks/useNow"
 
 function FeaturedFood() {
   const donations = useCharityStore(
     (state) => state.donations
   )
+  const now = useNow()
 
   const availableDonations = donations
-    .filter((donation) => isOpenForClaim(donation))
+    .filter((donation) => isOpenForClaim(donation, now))
     .slice(0, 3)
 
   return (

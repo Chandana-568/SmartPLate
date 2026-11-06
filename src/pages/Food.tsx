@@ -5,11 +5,13 @@ import FoodCard from "../components/FoodCard"
 import { useCharityStore } from "../store/useCharityStore"
 import { calculateDistance } from "../utils/distance"
 import { isOpenForClaim } from "../utils/donationStatus"
+import { useNow } from "../hooks/useNow"
 
 function Food() {
   // Live data from the app-wide Firestore subscription
   const donations = useCharityStore((state) => state.donations)
   const loading = useCharityStore((state) => state.loading)
+  const now = useNow() // expired food leaves this list the second its timer ends
   const firebaseError = useCharityStore((state) => state.error)
 
   const [search, setSearch] = useState("")
@@ -74,7 +76,7 @@ function Food() {
 
   // Unclaimed and still before its pickup deadline
   const availableDonations =
-    donations.filter((donation) => isOpenForClaim(donation))
+    donations.filter((donation) => isOpenForClaim(donation, now))
 
   // --------------------------------
   // Search + filters

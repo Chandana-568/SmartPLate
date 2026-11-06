@@ -3,6 +3,8 @@ import { useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
 import AIInsightBox from "../components/AIInsightBox"
+import CountdownTimer from "../components/CountdownTimer"
+import { MAX_PICKUP_HOURS, useNow } from "../hooks/useNow"
 import { useAuth } from "../context/auth"
 import { AiUnavailableError, analyzeFoodPhoto } from "../services/aiService"
 import { addDonationToFirestore } from "../services/donationService"
@@ -27,6 +29,8 @@ function Donate() {
   const { user, profile } = useAuth()
   const allDonations = useCharityStore((state) => state.donations)
   const fileInput = useRef<HTMLInputElement>(null)
+  const now = useNow()
+  const maxPickup = toLocalInputValue(new Date(now + MAX_PICKUP_HOURS * 60 * 60 * 1000))
 
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
@@ -73,7 +77,9 @@ function Donate() {
       }
       setFoodType(result.foodType)
       if (!pickupBefore) {
-        const safeUntil = new Date(Date.now() + result.safeHours * 60 * 60 * 1000)
+        // Never more than the 5-hour pickup window
+        const hours = Math.min(result.safeHours, MAX_PICKUP_HOURS)
+        const safeUntil = new Date(Date.now() + hours * 60 * 60 * 1000)
         setPickupBefore(toLocalInputValue(safeUntil))
       }
     } catch (err) {
@@ -157,6 +163,17 @@ function Donate() {
     const mealQuantity = Number(quantity)
     if (!Number.isFinite(mealQuantity) || mealQuantity <= 0) {
       setError("Number of meals must be greater than 0.")
+      return
+    }
+
+    // Pickup window: at least 15 minutes, at most 5 hours from now
+    const msUntilPickup = new Date(pickupBefore).getTime() - Date.now()
+    if (!Number.isFinite(msUntilPickup) || msUntilPickup < 15 * 60 * 1000) {
+      setError("Pickup time must be at least 15 minutes from now.")
+      return
+    }
+    if (msUntilPickup > MAX_PICKUP_HOURS * 60 * 60 * 1000) {
+      setError(`Pickup time can be at most ${MAX_PICKUP_HOURS} hours from now.`)
       return
     }
 
@@ -372,19 +389,40 @@ function Donate() {
             {locationError && <p className="mt-3 text-sm text-red-600">{locationError}</p>}
           </div>
 
-          {/* Pickup Time */}
+          {/* Pickup Time: max 5 hours */}
           <div className="mt-6">
-            <label className="text-sm font-semibold">Pickup before *</label>
+            <label className="text-sm font-semibold">
+              Pickup before * <span className="font-normal text-gray-500">(max {MAX_PICKUP_HOURS} hours)</span>
+            </label>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {[1, 2, 3, 4, 5].map((hours) => (
+                <button
+                  key={hours}
+                  type="button"
+                  onClick={() => setPickupBefore(toLocalInputValue(new Date(Date.now() + hours * 60 * 60 * 1000)))}
+                  className="rounded-full border px-3 py-1.5 text-xs font-semibold transition hover:bg-gray-50"
+                >
+                  +{hours} h
+                </button>
+              ))}
+            </div>
             <input
               type="datetime-local"
               value={pickupBefore}
+              max={maxPickup}
               onChange={(event) => setPickupBefore(event.target.value)}
               className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
             />
             {analysis && (
               <p className="mt-2 text-xs text-gray-500">
-                AI suggests this food stays safe for about {analysis.safeHours} hours.
+                AI suggests this food stays safe for about {analysis.safeHours} hours
+                {analysis.safeHours > MAX_PICKUP_HOURS ? ` (capped at ${MAX_PICKUP_HOURS} h)` : ""}.
               </p>
+            )}
+            {pickupBefore && (
+              <div className="mt-3">
+                <CountdownTimer pickupBefore={pickupBefore} />
+              </div>
             )}
           </div>
 

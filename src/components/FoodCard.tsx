@@ -3,6 +3,7 @@ import { Link } from "react-router-dom"
 import type { FoodDonation } from "../types"
 import { formatTime } from "../utils/donationStatus"
 import { riskLevel } from "../utils/riskScore"
+import CountdownTimer from "./CountdownTimer"
 
 interface FoodCardProps {
   donation: FoodDonation
@@ -118,6 +119,11 @@ function FoodCard({ donation, distance }: FoodCardProps) {
             </span>
           </div>
 
+        </div>
+
+        {/* Live countdown: turns into EXPIRED when time is up */}
+        <div className="mt-4">
+          <CountdownTimer pickupBefore={donation.pickupBefore} />
         </div>
 
         {/* Map Button */}

@@ -18,6 +18,7 @@ const Food = lazy(() => import("./pages/Food"))
 const FoodDetails = lazy(() => import("./pages/FoodDetails"))
 const Donate = lazy(() => import("./pages/Donate"))
 const Volunteers = lazy(() => import("./pages/Volunteers"))
+const ExpiredFood = lazy(() => import("./pages/ExpiredFood"))
 const Dashboard = lazy(() => import("./pages/Dashboard"))
 const Admin = lazy(() => import("./pages/Admin"))
 const MyRescues = lazy(() => import("./pages/MyRescues"))
@@ -49,6 +50,7 @@ function App() {
           <Route path="/food" element={<Food />} />
           <Route path="/food/:id" element={<FoodDetails />} />
           <Route path="/volunteers" element={<Volunteers />} />
+          <Route path="/expired" element={<ExpiredFood />} />
 
           {/* Authentication */}
           <Route path="/signup" element={<Signup />} />

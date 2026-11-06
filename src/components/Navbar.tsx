@@ -20,6 +20,8 @@ function Navbar() {
     ...(!user || role === "donor" || role === "admin"
       ? [{ name: "Donate Food", path: "/donate" }]
       : []),
+    // Food whose pickup timer ran out moves here from Find Food
+    { name: "Expired Food", path: "/expired" },
     ...(!user ? [{ name: "Volunteer", path: "/volunteers" }] : []),
   ]
 

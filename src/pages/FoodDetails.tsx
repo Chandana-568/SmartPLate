@@ -11,6 +11,8 @@ import { Link, useNavigate, useParams } from "react-router-dom"
 import { useAuth } from "../context/auth"
 import AIInsightBox from "../components/AIInsightBox"
 import StatusTimeline from "../components/StatusTimeline"
+import CountdownTimer from "../components/CountdownTimer"
+import { useNow } from "../hooks/useNow"
 import { claimDonation } from "../services/donationService"
 import { useCharityStore } from "../store/useCharityStore"
 import {
@@ -31,6 +33,7 @@ function FoodDetails() {
 
   const [claiming, setClaiming] = useState(false)
   const [claimError, setClaimError] = useState("")
+  const now = useNow() // re-check expiry every second
 
   const donation = donations.find(
     (item) => item.id === id
@@ -88,8 +91,8 @@ function FoodDetails() {
   }
 
   const canClaim = role === "ngo" || role === "admin"
-  const expired = isExpired(donation)
-  const open = isOpenForClaim(donation)
+  const expired = isExpired(donation, now)
+  const open = isOpenForClaim(donation, now)
 
   // Claim donation (NGOs only)
   const handleClaim = async () => {
@@ -305,6 +308,10 @@ function FoodDetails() {
                       {formatTime(donation.pickupBefore)}
                       {expired && " (expired)"}
                     </p>
+
+                    <div className="mt-2">
+                      <CountdownTimer pickupBefore={donation.pickupBefore} size="lg" />
+                    </div>
                   </div>
 
                 </div>

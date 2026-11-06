@@ -107,6 +107,12 @@ export interface FoodDonation {
   // After expiry: picked up by a poultry farm, compost unit or biogas plant
   recycle?: Recycle | null
 
+  // NGO can't collect it itself and asks for a volunteer.
+  // Missing on old listings = treated as requested (old behaviour).
+  volunteerRequested?: boolean | null
+  volunteerRequestedAt?: number | null
+  volunteerNote?: string | null
+
   // true for sample data loaded from the Admin page ("Clear demo data" removes it)
   seed?: boolean
 

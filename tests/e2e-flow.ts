@@ -237,6 +237,42 @@ async function main() {
   await expectAllowed("NGO-claimed food that expired goes to recyclers too", () =>
     updateDoc(doc(recycler2.db, "donations", claimedThenExpired), { recycle: { ...recycleBy(recycler2).recycle, type: "compost" } }))
 
+  // ---------- NGO can't collect: request a volunteer, or release ----------
+  const selfId = await postDonation(donor, {}, "2468")
+  await expectAllowed("NGO claims and says it will collect itself", () =>
+    updateDoc(doc(ngo.db, "donations", selfId), {
+      status: "claimed", rescuedBy: ngo.uid, rescuedByName: "Asha Ashram", claimedAt: Date.now(),
+      volunteerRequested: false, volunteerRequestedAt: null,
+    }))
+  await expectDenied("Volunteer can't take a task the NGO collects itself", () => accept(volunteer, selfId))
+  await expectDenied("Another NGO can't request a volunteer for it", () =>
+    updateDoc(doc(ngo2.db, "donations", selfId), { volunteerRequested: true, volunteerRequestedAt: Date.now() }))
+  await expectAllowed("NGO can't make it, requests a volunteer with a note", () =>
+    updateDoc(doc(ngo.db, "donations", selfId), {
+      volunteerRequested: true, volunteerRequestedAt: Date.now(), volunteerNote: "Van broke down",
+    }))
+  await expectDenied("NGO can't sneak other changes into a request", () =>
+    updateDoc(doc(ngo.db, "donations", selfId), { volunteerNote: "x", quantity: 999 }))
+  await expectAllowed("Volunteer accepts the requested task", () => accept(volunteer2, selfId))
+  await expectDenied("NGO can't release food a volunteer already accepted", () =>
+    updateDoc(doc(ngo.db, "donations", selfId), {
+      status: "available", rescuedBy: null, rescuedByName: null, claimedAt: null,
+      volunteerRequested: null, volunteerRequestedAt: null, volunteerNote: null,
+    }))
+
+  const releaseId = await postDonation(donor)
+  await claim(ngo, releaseId)
+  await expectDenied("Another NGO can't release someone else's claim", () =>
+    updateDoc(doc(ngo2.db, "donations", releaseId), {
+      status: "available", rescuedBy: null, rescuedByName: null, claimedAt: null,
+    }))
+  await expectAllowed("NGO releases food nobody can collect", () =>
+    updateDoc(doc(ngo.db, "donations", releaseId), {
+      status: "available", rescuedBy: null, rescuedByName: null, claimedAt: null,
+      volunteerRequested: null, volunteerRequestedAt: null, volunteerNote: null,
+    }))
+  await expectAllowed("Another NGO can claim the released food", () => claim(ngo2, releaseId))
+
   // ---------- Report ----------
   const failed = results.filter((r) => !r.ok)
   console.log("")

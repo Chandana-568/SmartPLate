@@ -74,7 +74,8 @@ export const subscribeToDonations = (
 // can't claim the same food at the same time.
 export const claimDonation = async (
   donationId: string,
-  ngo: Pick<UserProfile, "uid" | "name" | "orgName">
+  ngo: Pick<UserProfile, "uid" | "name" | "orgName">,
+  needVolunteer = false
 ) => {
   const ref = doc(db, "donations", donationId)
 
@@ -94,9 +95,43 @@ export const claimDonation = async (
       rescuedBy: ngo.uid,
       rescuedByName: ngo.orgName || ngo.name,
       claimedAt: Date.now(),
+      volunteerRequested: needVolunteer,
+      volunteerRequestedAt: needVolunteer ? Date.now() : null,
     })
   })
   notifyNgos("claimed", donationId)
+}
+
+// NGO can't collect claimed food itself: ask volunteers for help
+export const requestVolunteer = async (donationId: string, note = "") => {
+  await updateDoc(doc(db, "donations", donationId), {
+    volunteerRequested: true,
+    volunteerRequestedAt: Date.now(),
+    volunteerNote: note.trim().slice(0, 200) || null,
+  })
+}
+
+// NGO found a way to collect it after all
+export const cancelVolunteerRequest = async (donationId: string) => {
+  await updateDoc(doc(db, "donations", donationId), {
+    volunteerRequested: false,
+    volunteerRequestedAt: null,
+    volunteerNote: null,
+  })
+}
+
+// Nobody can collect it: give it back so another NGO can claim it in time
+export const releaseClaim = async (donationId: string) => {
+  await updateDoc(doc(db, "donations", donationId), {
+    status: "available",
+    rescuedBy: null,
+    rescuedByName: null,
+    claimedAt: null,
+    volunteerRequested: null,
+    volunteerRequestedAt: null,
+    volunteerNote: null,
+  })
+  notifyNgos("posted", donationId)
 }
 
 // Volunteer accepts a delivery task. Transaction stops two volunteers
@@ -117,6 +152,10 @@ export const acceptTask = async (
 
     if (data.volunteerId) {
       throw new Error("Another volunteer already accepted this task.")
+    }
+
+    if (data.volunteerRequested === false) {
+      throw new Error("The NGO is collecting this one itself.")
     }
 
     transaction.update(ref, {

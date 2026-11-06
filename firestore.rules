@@ -96,7 +96,8 @@ service cloud.firestore {
                  'volunteerName', 'pickupOtp', 'claimedAt', 'assignedAt',
                  'pickedUpAt', 'completedAt', 'riskScore', 'riskReasons',
                  'aiAnalysis', 'imageHash', 'reviewedBy', 'reviewedAt',
-                 'recycle', 'expiresAt']))
+                 'recycle', 'expiresAt', 'volunteerRequested',
+                 'volunteerRequestedAt', 'volunteerNote']))
 
         // NGO claims available food for itself
         || (hasRole('ngo')
@@ -104,13 +105,34 @@ service cloud.firestore {
             && resource.data.status == 'available'
             && request.resource.data.status == 'claimed'
             && request.resource.data.rescuedBy == request.auth.uid
-            && changedOnly(['status', 'rescuedBy', 'rescuedByName', 'claimedAt']))
+            && changedOnly(['status', 'rescuedBy', 'rescuedByName', 'claimedAt',
+                            'volunteerRequested', 'volunteerRequestedAt']))
+
+        // The claiming NGO asks for (or cancels) a volunteer while nobody has taken it
+        || (signedIn()
+            && notExpired()
+            && resource.data.rescuedBy == request.auth.uid
+            && resource.data.status == 'claimed'
+            && assignedVolunteer() == null
+            && changedOnly(['volunteerRequested', 'volunteerRequestedAt', 'volunteerNote']))
+
+        // The claiming NGO can't collect it at all: release it to other NGOs
+        || (signedIn()
+            && notExpired()
+            && resource.data.rescuedBy == request.auth.uid
+            && resource.data.status == 'claimed'
+            && assignedVolunteer() == null
+            && request.resource.data.status == 'available'
+            && request.resource.data.rescuedBy == null
+            && changedOnly(['status', 'rescuedBy', 'rescuedByName', 'claimedAt',
+                            'volunteerRequested', 'volunteerRequestedAt', 'volunteerNote']))
 
         // Volunteer accepts a claimed task nobody has taken yet
         || (hasRole('volunteer')
             && notExpired()
             && resource.data.status == 'claimed'
             && assignedVolunteer() == null
+            && resource.data.get('volunteerRequested', true) != false
             && request.resource.data.volunteerId == request.auth.uid
             && changedOnly(['volunteerId', 'volunteerName', 'assignedAt']))
 

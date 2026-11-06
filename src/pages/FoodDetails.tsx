@@ -99,7 +99,7 @@ function FoodDetails() {
   const open = isOpenForClaim(donation, now)
 
   // Claim donation (NGOs only)
-  const handleClaim = async () => {
+  const handleClaim = async (needVolunteer: boolean) => {
     if (!user) {
       navigate("/login")
       return
@@ -110,7 +110,7 @@ function FoodDetails() {
     try {
       setClaiming(true)
       setClaimError("")
-      await claimDonation(donation.id, profile)
+      await claimDonation(donation.id, profile, needVolunteer)
       navigate("/my-rescues")
     } catch (error) {
       console.error("Claim failed:", error)
@@ -375,23 +375,46 @@ function FoodDetails() {
                 </button>
               )}
 
-              {/* Claim Button */}
-              <button
-                type="button"
-                onClick={handleClaim}
-                disabled={
-                  !open ||
-                  claiming ||
-                  (Boolean(user) && !canClaim)
-                }
-                className="mt-3 w-full rounded-full
-                bg-black px-6 py-4 font-semibold text-white
-                transition hover:bg-gray-800
-                disabled:cursor-not-allowed
-                disabled:bg-gray-300"
-              >
-                {claimLabel}
-              </button>
+              {/* Claim: NGO says up front whether it can collect the food itself */}
+              {open && user && canClaim ? (
+                <div className="mt-3">
+                  <p className="mb-2 text-sm font-semibold text-gray-700">Claim this food. How will it reach you?</p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => handleClaim(false)}
+                      disabled={claiming}
+                      className="rounded-full bg-black px-5 py-4 font-semibold text-white transition hover:bg-gray-800 disabled:bg-gray-300"
+                    >
+                      {claiming ? "Claiming..." : "🚐 We'll collect it"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleClaim(true)}
+                      disabled={claiming}
+                      className="rounded-full border-2 border-black px-5 py-4 font-semibold transition hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      {claiming ? "Claiming..." : "🙋 Need a volunteer"}
+                    </button>
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500">
+                    "Need a volunteer" sends it to volunteers right away. You can still ask for one later from My Rescues.
+                  </p>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => (user ? undefined : navigate("/login"))}
+                  disabled={Boolean(user) || !open}
+                  className="mt-3 w-full rounded-full
+                  bg-black px-6 py-4 font-semibold text-white
+                  transition hover:bg-gray-800
+                  disabled:cursor-not-allowed
+                  disabled:bg-gray-300"
+                >
+                  {claimLabel}
+                </button>
+              )}
 
               {claimError && (
                 <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600">

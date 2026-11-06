@@ -3,14 +3,18 @@ import { useState } from "react"
 import { Link } from "react-router-dom"
 
 import ContactBox from "../components/ContactBox"
+import CountdownTimer from "../components/CountdownTimer"
 import MyPhoneBanner from "../components/MyPhoneBanner"
 import StatusTimeline from "../components/StatusTimeline"
 import WhatsAppSettings from "../components/WhatsAppSettings"
 import { useAuth } from "../context/auth"
 import {
   acceptTask,
+  cancelVolunteerRequest,
   markCompleted,
   markPickedUp,
+  releaseClaim,
+  requestVolunteer,
 } from "../services/donationService"
 import { useCharityStore } from "../store/useCharityStore"
 import type { FoodDonation, UserProfile } from "../types"
@@ -19,6 +23,15 @@ import { useNow } from "../hooks/useNow"
 import { isExpiredForPeople, RECYCLER_TYPES } from "../utils/recycle"
 
 type Action = (donation: FoodDonation) => Promise<void>
+
+// Old listings have no flag: they were always open to volunteers
+const wantsVolunteer = (d: FoodDonation) => d.volunteerRequested !== false
+
+function minutesAgo(ms?: number | null) {
+  if (!ms) return ""
+  const min = Math.max(0, Math.round((Date.now() - ms) / 60000))
+  return min < 1 ? "just now" : min < 60 ? `${min} min ago` : `${Math.floor(min / 60)} h ${min % 60} min ago`
+}
 
 // ------------------------------------------------------------
 // One delivery card. Shows the right button for the viewer's role.
@@ -42,6 +55,8 @@ function RescueCard({
   const [code, setCode] = useState("")
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
+  const [askOpen, setAskOpen] = useState(false)
+  const [note, setNote] = useState("")
 
   const isAdmin = role === "admin"
   const mine = donation.volunteerId === uid
@@ -56,6 +71,7 @@ function RescueCard({
     (role === "volunteer" || isAdmin) &&
     donation.status === "claimed" &&
     !expiredBeforePickup &&
+    wantsVolunteer(donation) &&
     unassigned
 
   // The assigned volunteer, or the NGO collecting it itself
@@ -114,6 +130,12 @@ function RescueCard({
           )}
         </div>
 
+        {donation.status === "claimed" && !expiredBeforePickup && (
+          <div className="mt-3">
+            <CountdownTimer pickupBefore={donation.pickupBefore} />
+          </div>
+        )}
+
         <div className="mt-5">
           <StatusTimeline donation={donation} variant="compact" />
         </div>
@@ -127,11 +149,120 @@ function RescueCard({
               : "♻️ It has moved to Expired Food for poultry farms, compost and biogas units."}
           </p>
         )}
-        {!expiredBeforePickup && donation.status === "claimed" && unassigned && myClaim && !isAdmin && (
-          <p className="mt-5 rounded-xl bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
-            Waiting for a volunteer. You can also collect it yourself with the donor's code.
-          </p>
+        {/* Volunteer view of an open task: why the NGO needs help */}
+        {canAccept && (
+          <div className="mt-5 rounded-xl bg-orange-50 px-4 py-3 text-sm text-orange-900">
+            <p className="font-semibold">
+              🙋 {donation.rescuedByName ?? "The NGO"} can't collect this and needs a volunteer
+            </p>
+            {donation.volunteerNote && <p className="mt-1 italic">"{donation.volunteerNote}"</p>}
+            {donation.volunteerRequestedAt && (
+              <p className="mt-1 text-xs text-orange-700">Asked {minutesAgo(donation.volunteerRequestedAt)}</p>
+            )}
+          </div>
         )}
+
+        {/* NGO: collect yourself -> ask a volunteer -> release to other NGOs */}
+        {!expiredBeforePickup && donation.status === "claimed" && unassigned && myClaim && !isAdmin && (() => {
+          const requested = wantsVolunteer(donation)
+          const minsLeft = (new Date(donation.pickupBefore).getTime() - now) / 60000
+          const waitedMins = donation.volunteerRequestedAt ? (now - donation.volunteerRequestedAt) / 60000 : 0
+          // No volunteer after 20 min, or under an hour left: suggest releasing it
+          const urgent = requested && (waitedMins >= 20 || minsLeft < 60)
+
+          return (
+            <div className="mt-5 space-y-3">
+              {requested ? (
+                <div className="rounded-xl bg-orange-50 px-4 py-3 text-sm text-orange-900">
+                  <p className="font-semibold">🙋 Volunteer requested {minutesAgo(donation.volunteerRequestedAt)}</p>
+                  <p className="mt-1">Every volunteer can see this task now. You'll get their contact when one accepts.</p>
+                  {donation.volunteerNote && <p className="mt-1 italic">Your note: "{donation.volunteerNote}"</p>}
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => run(() => cancelVolunteerRequest(donation.id))}
+                    className="mt-2 text-sm font-semibold underline disabled:opacity-50"
+                  >
+                    We can collect it ourselves after all
+                  </button>
+                </div>
+              ) : (
+                <div className="rounded-xl bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
+                  <p className="font-semibold">🚐 You're collecting this yourself</p>
+                  <p className="mt-1">Get the pickup code from the donor and enter it below when you collect.</p>
+                  {!askOpen ? (
+                    <button
+                      type="button"
+                      onClick={() => setAskOpen(true)}
+                      className="mt-2 w-full rounded-full border-2 border-yellow-700 px-4 py-2 font-semibold text-yellow-900 transition hover:bg-yellow-100"
+                    >
+                      Can't collect it? Request a volunteer
+                    </button>
+                  ) : (
+                    <form
+                      className="mt-2"
+                      onSubmit={(event) => {
+                        event.preventDefault()
+                        run(async () => {
+                          await requestVolunteer(donation.id, note)
+                          setAskOpen(false)
+                          setNote("")
+                        })
+                      }}
+                    >
+                      <textarea
+                        value={note}
+                        onChange={(event) => setNote(event.target.value)}
+                        maxLength={200}
+                        rows={2}
+                        placeholder="Optional note, e.g. 'Our van broke down. 30 meals, bring 2 bags.'"
+                        className="w-full rounded-xl border bg-white px-3 py-2 text-sm outline-none focus:ring-2"
+                      />
+                      <div className="mt-2 flex gap-2">
+                        <button
+                          type="submit"
+                          disabled={busy}
+                          className="flex-1 rounded-full bg-black px-4 py-2 font-semibold text-white transition hover:bg-gray-800 disabled:bg-gray-400"
+                        >
+                          {busy ? "Sending..." : "🙋 Request a volunteer"}
+                        </button>
+                        <button type="button" onClick={() => setAskOpen(false)} className="rounded-full border bg-white px-4 py-2 font-semibold">
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              )}
+
+              {/* Last resort: give it back before it expires */}
+              <div className={urgent ? "rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" : ""}>
+                {urgent && (
+                  <p className="mb-2">
+                    ⏰ {minsLeft < 60 ? `Only ${Math.max(0, Math.round(minsLeft))} min left` : "No volunteer for 20 min"}.
+                    If nobody can collect it, release it so another NGO nearby can claim it in time.
+                  </p>
+                )}
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    if (window.confirm("Release this food? Other NGOs will be able to claim it, and it leaves your list.")) {
+                      run(() => releaseClaim(donation.id))
+                    }
+                  }}
+                  className={
+                    urgent
+                      ? "w-full rounded-full bg-red-600 px-4 py-2 font-semibold text-white transition hover:bg-red-700 disabled:bg-gray-400"
+                      : "text-sm font-semibold text-red-600 underline disabled:opacity-50"
+                  }
+                >
+                  Nobody can collect it? Release to other NGOs
+                </button>
+              </div>
+            </div>
+          )
+        })()}
         {donation.status === "claimed" && !unassigned && !mine && (
           <p className="mt-5 rounded-xl bg-blue-50 px-4 py-3 text-sm text-blue-800">
             🚴 {donation.volunteerName} is heading to the donor.
@@ -327,11 +458,16 @@ function MyRescues() {
     if (d.status === "available" || d.status === "under_review") return false
     if (isAdmin) return true
     // Volunteers don't see open tasks whose food already expired
-    if (isVolunteer) return (d.status === "claimed" && !d.volunteerId && !isExpiredForPeople(d)) || d.volunteerId === uid
+    // ...and only tasks the NGO asked help for
+    if (isVolunteer)
+      return (d.status === "claimed" && !d.volunteerId && wantsVolunteer(d) && !isExpiredForPeople(d)) || d.volunteerId === uid
     return d.rescuedBy === uid
   })
 
-  const openTasks = relevant.filter((d) => d.status === "claimed" && !d.volunteerId)
+  // Soonest deadline first
+  const openTasks = relevant
+    .filter((d) => d.status === "claimed" && !d.volunteerId)
+    .sort((a, b) => new Date(a.pickupBefore).getTime() - new Date(b.pickupBefore).getTime())
   const active = relevant.filter(
     (d) => d.status === "picked-up" || (d.status === "claimed" && d.volunteerId)
   )
@@ -384,7 +520,7 @@ function MyRescues() {
             </h2>
             <p className="mx-auto mt-3 max-w-md text-gray-500">
               {isVolunteer
-                ? "When an NGO claims food, the task appears here instantly."
+                ? "When an NGO asks for a volunteer, the task appears here instantly."
                 : "Find available food and make your first rescue."}
             </p>
             {!isVolunteer && (
@@ -399,8 +535,12 @@ function MyRescues() {
         ) : (
           <>
             <Section
-              title={isVolunteer ? "Open delivery tasks" : "Waiting for a volunteer"}
-              hint={isVolunteer ? "Claimed by an NGO, needs a driver." : undefined}
+              title={isVolunteer ? "NGOs asking for help" : "Waiting for pickup"}
+              hint={
+                isVolunteer
+                  ? "These NGOs can't collect the food themselves. Soonest deadline first."
+                  : "Collect it yourself, ask a volunteer, or release it if nobody can make it."
+              }
               count={openTasks.length}
             >
               {openTasks.map(card)}

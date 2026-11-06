@@ -1,13 +1,13 @@
 import { useState } from "react"
 import { Navigate, useNavigate } from "react-router-dom"
 
-import RolePicker from "../components/RolePicker"
+import RolePicker, { RecyclerTypePicker } from "../components/RolePicker"
 import { useAuth } from "../context/auth"
 import {
   createUserProfile,
   homeForRole,
 } from "../services/userService"
-import type { Role } from "../types"
+import type { RecyclerType, Role } from "../types"
 
 // Shown to signed-in accounts that have no users/{uid} profile yet
 // (e.g. accounts created before roles existed).
@@ -16,6 +16,7 @@ function Onboarding() {
   const { user, profile, role: currentRole, loading } = useAuth()
 
   const [role, setRole] = useState<Exclude<Role, "admin">>("donor")
+  const [recyclerType, setRecyclerType] = useState<RecyclerType>("poultry")
   const [orgName, setOrgName] = useState("")
   const [phone, setPhone] = useState("")
   const [error, setError] = useState("")
@@ -28,7 +29,7 @@ function Onboarding() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
 
-    if (role === "ngo" && !orgName.trim()) {
+    if ((role === "ngo" || role === "recycler") && !orgName.trim()) {
       setError("Please enter your NGO / organisation name.")
       return
     }
@@ -41,6 +42,7 @@ function Onboarding() {
         role,
         orgName,
         phone,
+        recyclerType,
       })
       navigate(homeForRole(role))
     } catch (err) {
@@ -68,13 +70,20 @@ function Onboarding() {
           className="mt-10 rounded-3xl border bg-white p-8"
         >
           <RolePicker value={role} onChange={setRole} />
+          {role === "recycler" && (
+            <div className="mt-4">
+              <RecyclerTypePicker value={recyclerType} onChange={setRecyclerType} />
+            </div>
+          )}
 
           {role !== "volunteer" && (
             <div className="mt-6">
               <label className="text-sm font-semibold">
                 {role === "ngo"
                   ? "NGO / Organisation Name"
-                  : "Restaurant / Organisation (optional)"}
+                  : role === "recycler"
+                    ? "Farm / Unit Name"
+                    : "Restaurant / Organisation (optional)"}
               </label>
               <input
                 type="text"

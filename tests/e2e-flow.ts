@@ -89,7 +89,7 @@ async function postDonation(actor: Actor, overrides: Record<string, unknown> = {
   batch.set(ref, {
     title: "40 boxes veg biryani", description: "Fresh from a wedding", foodType: "Vegetarian",
     quantity: 40, location: "Vijayanagar, Mysuru", latitude: 12.3, longitude: 76.6,
-    pickupBefore: new Date(Date.now() + 3 * 3600e3).toISOString(), image: "data:image/jpeg;base64,AAAA",
+    pickupBefore: new Date(Date.now() + 3 * 3600e3).toISOString(), expiresAt: Date.now() + 3 * 3600e3, image: "data:image/jpeg;base64,AAAA",
     urgency: "medium", donorName: actor.name, donorId: actor.uid, donorEmail: "",
     aiAnalysis: null, riskScore: 0, riskReasons: [], imageHash: null,
     status: "available", rescuedBy: null, volunteerId: null, createdAt: Date.now(),
@@ -203,6 +203,39 @@ async function main() {
     postDonation(admin, { seed: true, status: "completed", rescuedBy: "seed-ngo-0", completedAt: Date.now() }))
   await expectDenied("Donor can't create an already-completed donation", () =>
     postDonation(donor, { status: "completed" }))
+
+  // ---------- Expired food -> poultry / compost / biogas ----------
+  const recycler = await signUp("recycler", "recycler")
+  const recycler2 = await signUp("recycler2", "recycler")
+  const past = Date.now() - 10 * 60e3
+  const recycleBy = (actor: Actor, status: "claimed" | "collected" = "claimed") => ({
+    recycle: { status, byId: actor.uid, byName: `${actor.name} Farm`, type: "poultry", claimedAt: Date.now() },
+  })
+  const freshId = await postDonation(donor)
+  await expectDenied("Recycler can't take food that is still fresh", () =>
+    updateDoc(doc(recycler.db, "donations", freshId), recycleBy(recycler)))
+  const expiredId = await postDonation(donor, { pickupBefore: new Date(past).toISOString(), expiresAt: past })
+  await expectDenied("NGO can't claim expired food", () => claim(ngo, expiredId))
+  await expectDenied("Donor can't take expired food for recycling", () =>
+    updateDoc(doc(donor.db, "donations", expiredId), recycleBy(donor)))
+  await expectAllowed("Recycler picks up expired food", () =>
+    updateDoc(doc(recycler.db, "donations", expiredId), recycleBy(recycler)))
+  await expectDenied("Second recycler can't take the same food", () =>
+    updateDoc(doc(recycler2.db, "donations", expiredId), recycleBy(recycler2)))
+  await expectDenied("Donor can't delete food being recycled", () =>
+    deleteDoc(doc(donor.db, "donations", expiredId)))
+  await expectDenied("Other recycler can't mark it collected", () =>
+    updateDoc(doc(recycler2.db, "donations", expiredId), recycleBy(recycler, "collected")))
+  await expectAllowed("Recycler marks it collected", () =>
+    updateDoc(doc(recycler.db, "donations", expiredId), recycleBy(recycler, "collected")))
+
+  const claimedThenExpired = await postDonation(donor, { pickupBefore: new Date(past).toISOString(), expiresAt: past, status: "available" })
+  await expectDenied("Volunteer can't accept a task whose food expired", async () => {
+    await updateDoc(doc(admin.db, "donations", claimedThenExpired), { status: "claimed", rescuedBy: ngo.uid })
+    await accept(volunteer, claimedThenExpired)
+  })
+  await expectAllowed("NGO-claimed food that expired goes to recyclers too", () =>
+    updateDoc(doc(recycler2.db, "donations", claimedThenExpired), { recycle: { ...recycleBy(recycler2).recycle, type: "compost" } }))
 
   // ---------- Report ----------
   const failed = results.filter((r) => !r.ok)

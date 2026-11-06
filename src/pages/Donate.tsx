@@ -205,6 +205,7 @@ function Donate() {
           latitude,
           longitude,
           pickupBefore,
+          expiresAt: new Date(pickupBefore).getTime(),
           image: photo?.dataUrl ?? DEFAULT_IMAGE,
           urgency: analysis && analysis.safeHours <= 4 ? "high" : "medium",
           donorName: profile?.orgName || user.displayName || user.email || "Community Donor",

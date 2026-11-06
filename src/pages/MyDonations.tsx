@@ -10,6 +10,7 @@ import {
 } from "../services/donationService"
 import { useCharityStore } from "../store/useCharityStore"
 import type { FoodDonation } from "../types"
+import { isExpiredForPeople, KG_PER_SERVING, RECYCLER_TYPES } from "../utils/recycle"
 import {
   deliveryStage,
   formatTime,
@@ -20,6 +21,14 @@ import {
 function badgeFor(donation: FoodDonation) {
   if (donation.status === "under_review") {
     return { label: "Under review", style: "bg-orange-100 text-orange-700" }
+  }
+  if (donation.recycle) {
+    return donation.recycle.status === "collected"
+      ? { label: "♻️ Recycled", style: "bg-teal-100 text-teal-800" }
+      : { label: "♻️ Being recycled", style: "bg-teal-100 text-teal-800" }
+  }
+  if (donation.status === "claimed" && isExpiredForPeople(donation)) {
+    return { label: "Expired", style: "bg-red-100 text-red-700" }
   }
   if (isExpired(donation)) return { label: "Expired", style: "bg-red-100 text-red-700" }
   switch (deliveryStage(donation)) {
@@ -155,7 +164,10 @@ function MyDonations() {
           <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {donations.map((donation) => {
               const badge = badgeFor(donation)
-              const showCode = donation.status === "claimed"
+              const expiredForPeople = isExpiredForPeople(donation)
+              const showCode = donation.status === "claimed" && !expiredForPeople
+              const canRemove =
+                (donation.status === "available" || donation.status === "under_review") && !donation.recycle
 
               return (
                 <div key={donation.id} className="overflow-hidden rounded-3xl border bg-white">
@@ -193,11 +205,26 @@ function MyDonations() {
 
                     {showCode && <PickupCode donationId={donation.id} />}
 
+                    {/* Expired: where the food goes instead of the bin */}
+                    {donation.recycle ? (
+                      <p className="mt-5 rounded-xl bg-teal-50 px-4 py-3 text-sm text-teal-800">
+                        ♻️ {donation.recycle.status === "collected" ? "Collected by" : "Being picked up by"}{" "}
+                        <span className="font-semibold">{donation.recycle.byName}</span> for{" "}
+                        {RECYCLER_TYPES[donation.recycle.type].use} (about{" "}
+                        {Math.round(donation.quantity * KG_PER_SERVING)} kg kept out of the bin).
+                      </p>
+                    ) : expiredForPeople ? (
+                      <p className="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+                        ⏰ The pickup timer ran out. It's listed in Expired Food so a nearby poultry farm,
+                        compost or biogas unit can collect it.
+                      </p>
+                    ) : null}
+
                     <div className="mt-6">
                       <StatusTimeline donation={donation} />
                     </div>
 
-                    {(donation.status === "available" || donation.status === "under_review") && (
+                    {canRemove && (
                       <button
                         type="button"
                         disabled={cancellingId === donation.id}

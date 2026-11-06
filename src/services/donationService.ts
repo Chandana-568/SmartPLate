@@ -12,7 +12,7 @@ import { db } from "../firebase"
 import { generatePickupCode } from "../utils/donationStatus"
 import { notifyNgos } from "./notifyService"
 
-import type { FoodDonation, UserProfile } from "../types"
+import type { FoodDonation, Recycle, RecyclerType, UserProfile } from "../types"
 
 const donationsCollection = collection(db, "donations")
 
@@ -159,6 +159,35 @@ export const markCompleted = async (donationId: string) => {
     completedAt: Date.now(),
   })
   notifyNgos("completed", donationId)
+}
+
+// Poultry farm / compost unit / biogas plant claims expired food.
+// Transaction so two recyclers can't take the same listing.
+export const claimForRecycling = async (
+  donationId: string,
+  recycler: Pick<UserProfile, "uid" | "name" | "orgName"> & { recyclerType: RecyclerType }
+) => {
+  const ref = doc(db, "donations", donationId)
+  await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(ref)
+    if (!snapshot.exists()) throw new Error("This listing no longer exists.")
+    if (snapshot.data().recycle) throw new Error("Someone else already picked this up.")
+    const recycle: Recycle = {
+      status: "claimed",
+      byId: recycler.uid,
+      byName: recycler.orgName || recycler.name,
+      type: recycler.recyclerType,
+      claimedAt: Date.now(),
+    }
+    transaction.update(ref, { recycle })
+  })
+}
+
+export const markRecycled = async (donation: FoodDonation) => {
+  if (!donation.recycle) return
+  await updateDoc(doc(db, "donations", donation.id), {
+    recycle: { ...donation.recycle, status: "collected", collectedAt: Date.now() },
+  })
 }
 
 // Admin approves a flagged listing so NGOs can see it

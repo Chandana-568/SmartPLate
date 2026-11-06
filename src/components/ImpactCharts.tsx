@@ -91,7 +91,7 @@ function ImpactCharts({ donations }: { donations: FoodDonation[] }) {
 
   const tiles = [
     { label: "Meals delivered", value: formatNumber(impact.meals), note: `${impact.rescues} completed rescues` },
-    { label: "Food saved from waste", value: `${formatNumber(impact.kgSaved)} kg`, note: `≈ ${KG_PER_MEAL} kg per meal` },
+    { label: "Food saved from waste", value: `${formatNumber(impact.kgSaved)} kg`, note: `≈ ${KG_PER_MEAL} kg per meal · +${formatNumber(impact.recycledKg)} kg expired food recycled` },
     { label: "CO₂e avoided", value: `${formatNumber(impact.co2Kg)} kg`, note: "≈ 2.5 kg CO₂e per kg of food" },
     { label: "NGOs served", value: formatNumber(impact.ngos), note: `${impact.donors} donors on the platform` },
   ]

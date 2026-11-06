@@ -13,6 +13,7 @@ import AIInsightBox from "../components/AIInsightBox"
 import StatusTimeline from "../components/StatusTimeline"
 import CountdownTimer from "../components/CountdownTimer"
 import { useNow } from "../hooks/useNow"
+import { isExpiredForPeople, RECYCLER_TYPES } from "../utils/recycle"
 import { claimDonation } from "../services/donationService"
 import { useCharityStore } from "../store/useCharityStore"
 import {
@@ -92,6 +93,9 @@ function FoodDetails() {
 
   const canClaim = role === "ngo" || role === "admin"
   const expired = isExpired(donation, now)
+  // Expired before pickup: location is for poultry / compost / biogas only
+  const expiredForPeople = isExpiredForPeople(donation, now)
+  const lockDetails = expiredForPeople && role !== "recycler" && role !== "admin"
   const open = isOpenForClaim(donation, now)
 
   // Claim donation (NGOs only)
@@ -286,7 +290,7 @@ function FoodDetails() {
                     </p>
 
                     <p className="font-semibold">
-                      {donation.location}
+                      {lockDetails ? "🔒 Locked: expired food" : donation.location}
                     </p>
                   </div>
 
@@ -337,18 +341,39 @@ function FoodDetails() {
 
               </div>
 
-              {/* Open Maps */}
-              <button
-                type="button"
-                onClick={openInMaps}
-                className="mt-8 flex w-full items-center
-                justify-center gap-2 rounded-full border
-                px-6 py-3 font-semibold transition
-                hover:bg-gray-50"
-              >
-                <Navigation className="h-4 w-4" />
-                Open Location in Maps
-              </button>
+              {/* Expired: only poultry / compost / biogas may see where to collect */}
+              {expiredForPeople && (
+                <div className="mt-8 rounded-2xl border border-dashed px-4 py-3 text-sm text-gray-700">
+                  <p className="font-semibold">♻️ Expired: not for people any more</p>
+                  {donation.recycle ? (
+                    <p className="mt-1">
+                      {donation.recycle.status === "collected" ? "Collected by" : "Being collected by"}{" "}
+                      <span className="font-semibold">{donation.recycle.byName}</span> for{" "}
+                      {RECYCLER_TYPES[donation.recycle.type].use}.
+                    </p>
+                  ) : (
+                    <p className="mt-1">
+                      Poultry farms, compost units and biogas plants can collect it from the{" "}
+                      <Link to="/expired" className="font-semibold underline">Expired Food</Link> page.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Open Maps (hidden for expired food unless you can collect it) */}
+              {!lockDetails && (
+                <button
+                  type="button"
+                  onClick={openInMaps}
+                  className="mt-8 flex w-full items-center
+                  justify-center gap-2 rounded-full border
+                  px-6 py-3 font-semibold transition
+                  hover:bg-gray-50"
+                >
+                  <Navigation className="h-4 w-4" />
+                  Open Location in Maps
+                </button>
+              )}
 
               {/* Claim Button */}
               <button

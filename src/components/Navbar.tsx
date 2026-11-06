@@ -40,6 +40,12 @@ function Navbar() {
   const roleLabel =
     role === "ngo"
       ? "NGO"
+      : role === "recycler"
+        ? profile?.recyclerType === "poultry"
+          ? "Poultry farm"
+          : profile?.recyclerType === "biogas"
+            ? "Biogas unit"
+            : "Compost unit"
       : role
         ? role.charAt(0).toUpperCase() + role.slice(1)
         : null

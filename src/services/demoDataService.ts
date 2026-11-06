@@ -114,7 +114,8 @@ export function buildDemoDonations(admin: { uid: string; email: string }, now = 
       location: place.name,
       latitude: place.lat,
       longitude: place.lng,
-      pickupBefore: localInput(createdAt + food.safeHours * HOUR),
+      pickupBefore: localInput(createdAt + Math.min(food.safeHours, 5) * HOUR),
+      expiresAt: createdAt + Math.min(food.safeHours, 5) * HOUR,
       urgency: food.safeHours <= 4 ? "high" : "medium",
       status,
       donorName: DONORS[i % DONORS.length],
@@ -146,6 +147,7 @@ export function buildDemoDonations(admin: { uid: string; email: string }, now = 
     latitude: PLACES[0].lat,
     longitude: PLACES[0].lng,
     pickupBefore: localInput(now + 5 * HOUR),
+    expiresAt: now + 5 * HOUR,
     urgency: "medium",
     status: "under_review",
     donorName: "Unknown Seller",
@@ -171,6 +173,53 @@ export function buildDemoDonations(admin: { uid: string; email: string }, now = 
     ],
     imageHash: null,
     createdAt: now - 10 * MIN,
+  })
+
+  // Expired food for the Expired Food section (poultry / compost / biogas)
+  const expired: { food: number; place: number; servings: number; expiredAgo: number; collected?: boolean }[] = [
+    { food: 2, place: 3, servings: 30, expiredAgo: 30 * MIN }, // veg: OK for a poultry farm
+    { food: 7, place: 6, servings: 25, expiredAgo: 60 * MIN }, // egg fried rice: compost / biogas only
+    { food: 6, place: 1, servings: 40, expiredAgo: 6 * HOUR, collected: true }, // already collected
+  ]
+  expired.forEach(({ food: f, place: p, servings, expiredAgo, collected }, k) => {
+    const food = FOODS[f]
+    const place = PLACES[p]
+    const expiresAt = now - expiredAgo
+    seeds.push({
+      seed: true,
+      title: `${servings} servings ${food.title.toLowerCase()}`,
+      description: food.description,
+      quantity: servings,
+      foodType: food.foodType,
+      location: place.name,
+      latitude: place.lat,
+      longitude: place.lng,
+      pickupBefore: localInput(expiresAt),
+      expiresAt,
+      urgency: "medium",
+      status: "available",
+      donorName: DONORS[(k + 2) % DONORS.length],
+      donorId: admin.uid,
+      donorEmail: admin.email,
+      image: IMG(IMAGES[(k + 5) % IMAGES.length]),
+      rescuedBy: null,
+      volunteerId: null,
+      aiAnalysis: analysisFor(food, servings),
+      riskScore: 0,
+      riskReasons: [],
+      imageHash: null,
+      createdAt: expiresAt - 4 * HOUR,
+      recycle: collected
+        ? {
+            status: "collected",
+            byId: "seed-recycler-poultry",
+            byName: "Sri Lakshmi Poultry Farm",
+            type: "poultry",
+            claimedAt: expiresAt + 20 * MIN,
+            collectedAt: expiresAt + 70 * MIN,
+          }
+        : null,
+    })
   })
 
   return seeds

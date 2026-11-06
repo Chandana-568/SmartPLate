@@ -7,18 +7,19 @@ import {
 } from "firebase/auth"
 
 import { auth } from "../firebase"
-import RolePicker from "../components/RolePicker"
+import RolePicker, { RecyclerTypePicker } from "../components/RolePicker"
 import {
   createUserProfile,
   homeForRole,
 } from "../services/userService"
-import type { Role } from "../types"
+import type { RecyclerType, Role } from "../types"
 import { authErrorMessage } from "../utils/authErrors"
 
 function Signup() {
   const navigate = useNavigate()
 
   const [role, setRole] = useState<Exclude<Role, "admin">>("donor")
+  const [recyclerType, setRecyclerType] = useState<RecyclerType>("poultry")
   const [orgName, setOrgName] = useState("")
   const [phone, setPhone] = useState("")
   const [name, setName] = useState("")
@@ -47,7 +48,7 @@ function Signup() {
       return
     }
 
-    if (role === "ngo" && !orgName.trim()) {
+    if ((role === "ngo" || role === "recycler") && !orgName.trim()) {
       setError("Please enter your NGO / organisation name.")
       return
     }
@@ -91,6 +92,7 @@ function Signup() {
         role,
         orgName,
         phone,
+        recyclerType,
       })
 
       // Signup successful: user is already signed in
@@ -142,6 +144,11 @@ function Signup() {
             </label>
             <div className="mt-2">
               <RolePicker value={role} onChange={setRole} />
+              {role === "recycler" && (
+                <div className="mt-4">
+                  <RecyclerTypePicker value={recyclerType} onChange={setRecyclerType} />
+                </div>
+              )}
             </div>
           </div>
 
@@ -151,7 +158,9 @@ function Signup() {
               <label className="text-sm font-semibold">
                 {role === "ngo"
                   ? "NGO / Organisation Name"
-                  : "Restaurant / Organisation (optional)"}
+                  : role === "recycler"
+                    ? "Farm / Unit Name"
+                    : "Restaurant / Organisation (optional)"}
               </label>
               <input
                 type="text"

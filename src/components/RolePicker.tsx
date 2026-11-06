@@ -1,6 +1,7 @@
-import { Bike, HandHeart, Utensils } from "lucide-react"
+import { Bike, HandHeart, Recycle, Utensils } from "lucide-react"
 
-import type { Role } from "../types"
+import type { RecyclerType, Role } from "../types"
+import { RECYCLER_TYPES } from "../utils/recycle"
 
 type PickableRole = Exclude<Role, "admin">
 
@@ -28,7 +29,44 @@ const OPTIONS: {
     description: "Pick up and deliver food",
     icon: Bike,
   },
+  {
+    role: "recycler",
+    title: "Poultry / Compost / Biogas",
+    description: "Collects expired food so it never goes to the bin",
+    icon: Recycle,
+  },
 ]
+
+// Shown when "Poultry / Compost / Biogas" is chosen
+export function RecyclerTypePicker({
+  value,
+  onChange,
+}: {
+  value: RecyclerType
+  onChange: (type: RecyclerType) => void
+}) {
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {(Object.keys(RECYCLER_TYPES) as RecyclerType[]).map((type) => {
+        const selected = value === type
+        return (
+          <button
+            key={type}
+            type="button"
+            aria-pressed={selected}
+            onClick={() => onChange(type)}
+            className={`rounded-xl border px-3 py-2 text-sm transition ${
+              selected ? "border-black bg-black text-white" : "bg-white hover:border-gray-400"
+            }`}
+          >
+            <span className="block text-lg">{RECYCLER_TYPES[type].emoji}</span>
+            {RECYCLER_TYPES[type].label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
 
 interface RolePickerProps {
   value: PickableRole

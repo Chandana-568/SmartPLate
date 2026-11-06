@@ -13,6 +13,8 @@ import {
 import { useCharityStore } from "../store/useCharityStore"
 import type { FoodDonation, UserProfile } from "../types"
 import { formatTime } from "../utils/donationStatus"
+import { useNow } from "../hooks/useNow"
+import { isExpiredForPeople, RECYCLER_TYPES } from "../utils/recycle"
 
 type Action = (donation: FoodDonation) => Promise<void>
 
@@ -43,14 +45,20 @@ function RescueCard({
   const myClaim = donation.rescuedBy === uid
   const unassigned = !donation.volunteerId
 
+  // Claimed, but its timer ran out before pickup: not for people any more
+  const now = useNow()
+  const expiredBeforePickup = isExpiredForPeople(donation, now)
+
   const canAccept =
     (role === "volunteer" || isAdmin) &&
     donation.status === "claimed" &&
+    !expiredBeforePickup &&
     unassigned
 
   // The assigned volunteer, or the NGO collecting it itself
   const canPickUp =
     donation.status === "claimed" &&
+    !expiredBeforePickup &&
     (mine || isAdmin || (myClaim && unassigned))
 
   const canComplete =
@@ -108,7 +116,15 @@ function RescueCard({
         </div>
 
         {/* Status messages */}
-        {donation.status === "claimed" && unassigned && myClaim && !isAdmin && (
+        {expiredBeforePickup && (
+          <p className="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+            ⚠️ The pickup timer ran out, so this food is no longer for people.{" "}
+            {donation.recycle
+              ? `♻️ ${donation.recycle.byName} is collecting it for ${RECYCLER_TYPES[donation.recycle.type].use}.`
+              : "♻️ It has moved to Expired Food for poultry farms, compost and biogas units."}
+          </p>
+        )}
+        {!expiredBeforePickup && donation.status === "claimed" && unassigned && myClaim && !isAdmin && (
           <p className="mt-5 rounded-xl bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
             Waiting for a volunteer. You can also collect it yourself with the donor's code.
           </p>
@@ -263,7 +279,8 @@ function MyRescues() {
   const relevant = donations.filter((d) => {
     if (d.status === "available" || d.status === "under_review") return false
     if (isAdmin) return true
-    if (isVolunteer) return (d.status === "claimed" && !d.volunteerId) || d.volunteerId === uid
+    // Volunteers don't see open tasks whose food already expired
+    if (isVolunteer) return (d.status === "claimed" && !d.volunteerId && !isExpiredForPeople(d)) || d.volunteerId === uid
     return d.rescuedBy === uid
   })
 

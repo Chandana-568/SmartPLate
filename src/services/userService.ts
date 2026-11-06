@@ -2,7 +2,7 @@ import { doc, setDoc } from "firebase/firestore"
 import type { User } from "firebase/auth"
 
 import { db } from "../firebase"
-import type { Role, UserProfile } from "../types"
+import type { RecyclerType, Role, UserProfile } from "../types"
 
 export async function createUserProfile(
   user: User,
@@ -11,6 +11,7 @@ export async function createUserProfile(
     role: Exclude<Role, "admin">
     orgName?: string
     phone?: string
+    recyclerType?: RecyclerType
   }
 ) {
   const profile: Omit<UserProfile, "uid"> = {
@@ -20,6 +21,7 @@ export async function createUserProfile(
     orgName: details.orgName?.trim() ?? "",
     phone: details.phone?.trim() ?? "",
     createdAt: Date.now(),
+    ...(details.role === "recycler" ? { recyclerType: details.recyclerType ?? "compost" } : {}),
   }
 
   await setDoc(doc(db, "users", user.uid), profile)
@@ -34,6 +36,8 @@ export function homeForRole(role: Role | null): string {
       return "/food"
     case "volunteer":
       return "/my-rescues"
+    case "recycler":
+      return "/expired"
     case "admin":
       return "/admin"
     default:

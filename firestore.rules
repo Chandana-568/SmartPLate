@@ -34,7 +34,7 @@ service cloud.firestore {
       // You can create only your own profile, and never as admin
       allow create: if signedIn()
         && request.auth.uid == uid
-        && request.resource.data.role in ['donor', 'ngo', 'volunteer'];
+        && request.resource.data.role in ['donor', 'ngo', 'volunteer', 'recycler'];
 
       // You can edit your own profile but not change your role
       allow update: if (signedIn()
@@ -73,6 +73,18 @@ service cloud.firestore {
         return resource.data.get('volunteerId', null);
       }
 
+      // Pickup timer (max 5 h). Old listings without expiresAt never expire here.
+      function notExpired() {
+        return resource.data.get('expiresAt', null) == null
+          || request.time.toMillis() < resource.data.expiresAt;
+      }
+
+      function expiredForPeople() {
+        return resource.data.get('expiresAt', null) is number
+          && request.time.toMillis() >= resource.data.expiresAt
+          && resource.data.status in ['available', 'claimed'];
+      }
+
       allow update: if isAdmin()
 
         // Donor edits details; delivery fields are off limits
@@ -83,10 +95,12 @@ service cloud.firestore {
                  'donorId', 'rescuedBy', 'rescuedByName', 'volunteerId',
                  'volunteerName', 'pickupOtp', 'claimedAt', 'assignedAt',
                  'pickedUpAt', 'completedAt', 'riskScore', 'riskReasons',
-                 'aiAnalysis', 'imageHash', 'reviewedBy', 'reviewedAt']))
+                 'aiAnalysis', 'imageHash', 'reviewedBy', 'reviewedAt',
+                 'recycle', 'expiresAt']))
 
         // NGO claims available food for itself
         || (hasRole('ngo')
+            && notExpired()
             && resource.data.status == 'available'
             && request.resource.data.status == 'claimed'
             && request.resource.data.rescuedBy == request.auth.uid
@@ -94,6 +108,7 @@ service cloud.firestore {
 
         // Volunteer accepts a claimed task nobody has taken yet
         || (hasRole('volunteer')
+            && notExpired()
             && resource.data.status == 'claimed'
             && assignedVolunteer() == null
             && request.resource.data.volunteerId == request.auth.uid
@@ -102,6 +117,7 @@ service cloud.firestore {
         // Assigned volunteer (or the NGO collecting it itself) picks it up
         // with the donor's correct 4-digit code
         || (signedIn()
+            && notExpired()
             && resource.data.status == 'claimed'
             && request.resource.data.status == 'picked-up'
             && request.resource.data.volunteerId == request.auth.uid
@@ -118,13 +134,33 @@ service cloud.firestore {
                 || resource.data.volunteerId == request.auth.uid)
             && resource.data.status == 'picked-up'
             && request.resource.data.status == 'completed'
-            && changedOnly(['status', 'completedAt']));
+            && changedOnly(['status', 'completedAt']))
 
-      // Donors can cancel only food nobody has claimed yet
+        // Poultry farm / compost / biogas unit claims expired food nobody took
+        || (hasRole('recycler')
+            && expiredForPeople()
+            && resource.data.get('recycle', null) == null
+            && request.resource.data.recycle.byId == request.auth.uid
+            && request.resource.data.recycle.status == 'claimed'
+            && request.resource.data.recycle.type in ['poultry', 'compost', 'biogas']
+            && changedOnly(['recycle']))
+
+        // ...and marks it collected
+        || (hasRole('recycler')
+            && resource.data.get('recycle', null) != null
+            && resource.data.recycle.byId == request.auth.uid
+            && resource.data.recycle.status == 'claimed'
+            && request.resource.data.recycle.byId == request.auth.uid
+            && request.resource.data.recycle.type == resource.data.recycle.type
+            && request.resource.data.recycle.status == 'collected'
+            && changedOnly(['recycle']));
+
+      // Donors can cancel only food nobody has claimed or is recycling
       allow delete: if isAdmin()
         || (signedIn()
             && resource.data.donorId == request.auth.uid
-            && resource.data.status in ['available', 'under_review']);
+            && resource.data.status in ['available', 'under_review']
+            && resource.data.get('recycle', null) == null);
 
       // ---------- donations/{id}/private/otp (pickup code) ----------
       match /private/{docId} {

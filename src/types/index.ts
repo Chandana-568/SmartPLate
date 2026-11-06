@@ -23,7 +23,8 @@ export interface FoodAnalysis {
   concerns: string[]
 }
 
-export type Role = "donor" | "ngo" | "volunteer" | "admin"
+// "recycler" = poultry farm, compost unit or biogas plant: collects expired food
+export type Role = "donor" | "ngo" | "volunteer" | "recycler" | "admin"
 
 // Roles a user may pick for themselves at sign-up.
 // "admin" is only granted from the Firebase console.
@@ -31,7 +32,20 @@ export const SELF_SERVICE_ROLES: Exclude<Role, "admin">[] = [
   "donor",
   "ngo",
   "volunteer",
+  "recycler",
 ]
+
+export type RecyclerType = "poultry" | "compost" | "biogas"
+
+// Expired food collected by a poultry farm, compost unit or biogas plant
+export interface Recycle {
+  status: "claimed" | "collected"
+  byId: string
+  byName: string
+  type: RecyclerType
+  claimedAt: number
+  collectedAt?: number
+}
 
 export interface UserProfile {
   uid: string
@@ -46,6 +60,9 @@ export interface UserProfile {
   whatsappOptIn?: boolean
   latitude?: number | null
   longitude?: number | null
+
+  // Recyclers only
+  recyclerType?: RecyclerType
 }
 
 export interface FoodDonation {
@@ -58,6 +75,8 @@ export interface FoodDonation {
   latitude: number | null
   longitude: number | null
   pickupBefore: string
+  // Same moment in epoch ms, so the security rules can check expiry
+  expiresAt?: number
   urgency: Urgency
   status: FoodStatus
   donorName: string
@@ -84,6 +103,9 @@ export interface FoodDonation {
   imageHash?: string | null
   reviewedBy?: string
   reviewedAt?: number
+
+  // After expiry: picked up by a poultry farm, compost unit or biogas plant
+  recycle?: Recycle | null
 
   // true for sample data loaded from the Admin page ("Clear demo data" removes it)
   seed?: boolean

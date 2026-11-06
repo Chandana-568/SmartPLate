@@ -1,4 +1,4 @@
-import { CheckCircle2, Lock, MapPin, Navigation, Recycle, Scale, TimerOff, User } from "lucide-react"
+import { CheckCircle2, Lock, MapPin, Navigation, Recycle, Scale, TimerOff } from "lucide-react"
 import { useState } from "react"
 import { Link } from "react-router-dom"
 
@@ -113,9 +113,6 @@ function ExpiredFood() {
             <>
               {/* Pickup details: recyclers (and admins) only */}
               <div className="mt-3 space-y-1.5 rounded-xl bg-gray-50 px-3 py-2.5 text-sm text-gray-700">
-                <p className="flex items-center gap-2">
-                  <User className="h-4 w-4" /> {d.donorName}
-                </p>
                 <p className="flex items-center gap-2">
                   <MapPin className="h-4 w-4" /> {d.location}
                   {km != null && <span className="font-semibold">· {km.toFixed(1)} km</span>}
